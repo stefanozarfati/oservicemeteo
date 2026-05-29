@@ -187,12 +187,7 @@ function saveKey(){
 }
 // Mostra/nasconde setup in base a chiave esistente
 window.addEventListener("load",()=>{
-  const k=getKey();
-  if(k){
-    document.getElementById("setup").style.display="none";
-    document.getElementById("content").innerHTML=
-      '<div class="empty"><div class="ebig">🌲</div>Inserisci una località per le previsioni.<br><small style="font-size:.75rem;color:#334155">Chiave API configurata · <a href="#" onclick="resetKey()" style="color:var(--o)">Cambia chiave</a></small></div>';
-  }
+  document.getElementById("setup").style.display="none";
 });
 function resetKey(){
   document.getElementById("setup").style.display="block";
@@ -243,12 +238,7 @@ document.getElementById("sbtn").addEventListener("click",go);
 async function go(){
   const loc=document.getElementById("inp").value.trim();
   if(!loc)return;
-  const apiKey=getKey();
-  if(!apiKey){
-    document.getElementById("setup").style.display="block";
-    document.getElementById("keyStatus").innerHTML='<span class="key-err">⚠️ Inserisci prima la chiave API</span>';
-    return;
-  }
+
   aiData=null;hourlyData=null;selDay=0;
   loader("Consultando iLMeteo, 3bMeteo, meteo.it...");
 
