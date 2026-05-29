@@ -137,7 +137,7 @@ body{background:#0a1a0e;color:var(--t);font-family:'Raleway',sans-serif;min-heig
   </div>
 
   <!-- Setup chiave API -->
-  <div class="setup" id="setup">
+  <div class="setup" id="setup" style="display:none">
     <h2>🔑 Configura la chiave API</h2>
     <p>
       Per consultare le fonti meteo in tempo reale, questa app usa l'AI di Anthropic.<br>
@@ -161,7 +161,7 @@ body{background:#0a1a0e;color:var(--t);font-family:'Raleway',sans-serif;min-heig
 
   <div id="content">
     <div class="empty"><div class="ebig">🌲</div>
-      Inserisci la tua chiave API qui sopra, poi cerca qualsiasi località.<br>
+      Inserisci una località per le previsioni.<br>
       L'AI consulterà iLMeteo, 3bMeteo e meteo.it.
     </div>
   </div>
@@ -254,9 +254,9 @@ async function go(){
 
   // Step 1: AI multi-fonte
   try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{
+    const res=await fetch("https://oservicemeteo-proxy.vercel.app/api/proxy",{
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","anthropic-beta":"web-search-2025-03-05"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         model:"claude-sonnet-4-6",
         max_tokens:1000,
