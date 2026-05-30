@@ -273,7 +273,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     <div class="radar-tabs">
       <button class="radar-tab active" id="tab-rv" onclick="switchRadar('rv')">Rainviewer</button>
       <button class="radar-tab" id="tab-dpc" onclick="switchRadar('dpc')">Prot. Civile</button>
-      <button class="radar-tab" id="tab-3b" onclick="switchRadar('3b')" style="border-color:rgba(40,200,100,.4);color:#4ade80">3bMeteo ★</button>
+      <button class="radar-tab" id="tab-3b" onclick="open3bDirect()" style="border-color:rgba(40,200,100,.4);color:#4ade80">3bMeteo ★</button>
     </div>
     <button class="radar-close" onclick="closeRadar()">✕</button>
   </div>
@@ -309,36 +309,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       🇮🇹 Radar Protezione Civile · SRI (intensità pioggia al suolo) · Aggiornamento ogni 5 min · Solo dati osservati
     </div>
   </div>
-  <!-- 3bMeteo radar panel -->
-  <div id="radar-3b-wrap" style="display:none">
-    <div id="radar-3b-loading" style="text-align:center;padding:2rem;font-size:.88rem;color:var(--t2)">
-      Caricamento radar 3bMeteo...
-    </div>
-    <iframe id="radar-frame-3b" src="" style="width:100%;height:520px;border:none;display:none"
-      onload="setTimeout(function(){if(typeof on3bLoad==='function')on3bLoad();},100)" onerror="setTimeout(function(){if(typeof on3bError==='function')on3bError();},100)"></iframe>
-    <div id="radar-3b-blocked" style="display:none;padding:1.5rem;text-align:center">
-      <div style="font-size:.88rem;color:var(--t2);margin-bottom:1rem;line-height:1.6">
-        3bMeteo non consente l'integrazione diretta per motivi di sicurezza.<br>
-        Si apre in una nuova scheda — nowcast 30 min incluso.
-      </div>
-      <a id="link-3b" href="" target="_blank"
-        style="display:inline-flex;align-items:center;gap:.6rem;background:rgba(240,112,32,.2);
-        border:2px solid var(--o);border-radius:12px;padding:.85rem 1.5rem;color:var(--o2);
-        font-size:.95rem;font-weight:700;text-decoration:none">
-        🌧️ Apri Radar 3bMeteo
-      </a>
-    </div>
-  </div>
 </div>
-  <div id="fav-wrap"></div>
-  <div id="drag-hint" class="drag-hint" style="display:none">⠿ Tieni premuto e trascina le sezioni per riordinarle</div>
-  <div id="content">
-    <div class="empty">
-      <div class="ebig">🌲</div>
-      Inserisci una località per le previsioni multi-modello.<br>
-      Funziona per qualsiasi posto in Italia e nel mondo.
-    </div>
-  </div>
 </div>
 
 <div class="install-banner" id="banner">
@@ -451,7 +422,6 @@ function switchRadar(mode){
   });
   document.getElementById("radar-rv-wrap").style.display=mode==="rv"?"block":"none";
   document.getElementById("radar-dpc-wrap").style.display=mode==="dpc"?"block":"none";
-  const w3b=document.getElementById("radar-3b-wrap");
   if(w3b) w3b.style.display=mode==="3b"?"block":"none";
   if(mode==="rv"){stopRadarPlay();initRainviewer();}
   else if(mode==="dpc") initDPC();
@@ -1218,6 +1188,12 @@ function restoreOrder(){
 
 
 // ── 3bMeteo Radar ─────────────────────────────────────────────────────────
+function open3bDirect(){
+  // Apre 3bMeteo radar in nuova scheda — non chiude il pannello radar
+  const url="https://www.3bmeteo.com/radar/italia";
+  window.open(url,"_blank");
+}
+
 function get3bUrl(){
   const name=CUR?.name||"";
   const slug=name.toLowerCase().replace(/[àáâãäå]/g,"a").replace(/[èéêë]/g,"e")
