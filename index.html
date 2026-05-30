@@ -254,8 +254,8 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
   <div class="srow">
     <input class="sinp" id="inp" placeholder="Città, monte, valle, frazione..."
-      autocomplete="off" autocorrect="off" spellcheck="false">
-    <button class="sbtn" id="sbtn">🔍</button>
+      autocomplete="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')go()">
+    <button class="sbtn" id="sbtn" onclick="go()">🔍</button>
   </div>
   <div class="sug" id="sug"></div>
 
@@ -641,6 +641,7 @@ function loadCSS(href){
 //  GEOCODING
 // ══════════════════════════════════════════════════════════════════════
 async function geocode(q){
+  console.log("geocode() chiamato, q=",q);
   const results = [];
   const seen = new Set();
   const queries = [q];
@@ -698,7 +699,9 @@ async function geocode(q){
 }
 
 async function go(){
-  const v=_inp.value.trim(); if(!v)return;
+  const v=_inp.value.trim();
+  console.log("go() chiamato, v=",v);
+  if(!v)return;
   // Chiudi radar se aperto
   const rp=document.getElementById("radar-panel");
   if(rp&&rp.classList.contains("open")) closeRadar();
