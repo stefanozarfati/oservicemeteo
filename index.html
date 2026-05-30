@@ -699,7 +699,8 @@ async function geocode(q){
 }
 
 async function go(){
-  const v=_inp.value.trim();
+  const inp=document.getElementById("inp");
+  const v=inp?inp.value.trim():"";
   console.log("go() chiamato, v=",v);
   if(!v)return;
   // Chiudi radar se aperto
@@ -961,6 +962,7 @@ document.getElementById("ibtn").addEventListener("click",async()=>{if(dP){dP.pro
 
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
+  initAutocomplete();
     const sw=`const C="osm-v5";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x))))));
