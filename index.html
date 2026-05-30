@@ -201,11 +201,34 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #radar-panel{display:none;background:rgba(255,255,255,.07);border:2px solid rgba(240,112,32,.5);
   border-radius:17px;overflow:hidden;margin-bottom:.8rem;animation:su .3s ease}
 #radar-panel.open{display:block}
-#radar-frame{width:100%;height:600px;border:none;display:block}
 .radar-header{display:flex;align-items:center;justify-content:space-between;
-  padding:.8rem 1rem;background:rgba(0,0,0,.2)}
-.radar-title{font-size:.88rem;font-weight:700;color:var(--o2);letter-spacing:1px;text-transform:uppercase}
-.radar-close{background:none;border:none;color:var(--t2);font-size:1.2rem;cursor:pointer;padding:.2rem}
+  padding:.75rem 1rem;background:rgba(0,0,0,.25);flex-wrap:wrap;gap:.4rem}
+.radar-title{font-size:.875rem;font-weight:700;color:var(--o2);letter-spacing:1px;text-transform:uppercase}
+.radar-tabs{display:flex;gap:.35rem}
+.radar-tab{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;padding:.3rem .7rem;font-size:.75rem;color:var(--t2);cursor:pointer;
+  font-family:'Raleway',sans-serif;transition:.15s}
+.radar-tab.active{background:rgba(240,112,32,.25);border-color:var(--o);color:var(--o2)}
+.radar-close{background:none;border:none;color:var(--t2);font-size:1.1rem;cursor:pointer;padding:.2rem}
+#radar-map-wrap{position:relative}
+#radar-map{width:100%;height:420px}
+#radar-controls{display:flex;align-items:center;gap:.5rem;padding:.65rem 1rem;
+  background:rgba(0,0,0,.25);flex-wrap:wrap}
+#radar-timeline{flex:1;min-width:0;display:flex;gap:3px;align-items:center;overflow:hidden}
+.rt-frame{height:8px;flex:1;border-radius:3px;cursor:pointer;transition:.15s;opacity:.5}
+.rt-frame.past{background:#6ab4e0}
+.rt-frame.nowcast{background:#ff8c30}
+.rt-frame.active{opacity:1;transform:scaleY(1.5)}
+#radar-time{font-size:.78rem;color:var(--o2);font-weight:700;min-width:80px;text-align:center;font-family:sans-serif}
+.radar-ctrl-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  border-radius:8px;padding:.35rem .65rem;color:var(--t);cursor:pointer;font-size:.9rem;
+  transition:.15s;min-width:34px;text-align:center}
+.radar-ctrl-btn:hover{background:rgba(240,112,32,.2);border-color:var(--o)}
+.radar-ctrl-btn.playing{background:rgba(240,112,32,.2);border-color:var(--o)}
+#radar-legend{display:flex;align-items:center;gap:.4rem;padding:.4rem 1rem;
+  background:rgba(0,0,0,.15);font-size:.68rem;color:var(--t3);flex-wrap:wrap}
+.rl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+#radar-frame-dpc{width:100%;height:480px;border:none;display:block}
 </style>
 </head>
 <body>
@@ -235,7 +258,41 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <div class="panel" id="pnl-fav"></div>
   <div class="panel" id="pnl-rec"></div>
 
-  <div id="radar-panel"><div class="radar-header"><span class="radar-title">🌧️ Radar · ±30 minuti</span><button class="radar-close" onclick="closeRadar()">✕ Chiudi</button></div><div style="padding:.5rem 1rem;background:rgba(0,0,0,.15);font-size:.78rem;color:var(--t2)">▶ Mostra ultimi 30 min osservati + nowcast 30 min futuri. I controlli Play/Zoom sono in basso sulla mappa.</div><iframe id="radar-frame" src="" loading="lazy" allowfullscreen></iframe></div>
+  <div id="radar-panel">
+  <div class="radar-header">
+    <span class="radar-title">🌧️ Radar Precipitazioni</span>
+    <div class="radar-tabs">
+      <button class="radar-tab active" id="tab-rv" onclick="switchRadar('rv')">Rainviewer</button>
+      <button class="radar-tab" id="tab-dpc" onclick="switchRadar('dpc')">Protezione Civile</button>
+    </div>
+    <button class="radar-close" onclick="closeRadar()">✕</button>
+  </div>
+  <!-- Rainviewer custom map -->
+  <div id="radar-rv-wrap">
+    <div id="radar-map-wrap">
+      <div id="radar-map"></div>
+    </div>
+    <div id="radar-controls">
+      <button class="radar-ctrl-btn" id="btn-prev" onclick="radarPrev()">◀</button>
+      <button class="radar-ctrl-btn" id="btn-play" onclick="radarTogglePlay()">▶</button>
+      <button class="radar-ctrl-btn" id="btn-next" onclick="radarNext()">▶▶</button>
+      <div id="radar-timeline"></div>
+      <div id="radar-time">--:--</div>
+    </div>
+    <div id="radar-legend">
+      <div class="rl-dot" style="background:#6ab4e0"></div><span>Passato (30 min)</span>
+      <div class="rl-dot" style="background:#ff8c30;margin-left:.5rem"></div><span>Nowcast futuro (30 min)</span>
+      <span style="margin-left:auto">Dati: <a href="https://rainviewer.com" target="_blank" style="color:var(--o)">RainViewer</a></span>
+    </div>
+  </div>
+  <!-- Protezione Civile iframe -->
+  <div id="radar-dpc-wrap" style="display:none">
+    <iframe id="radar-frame-dpc" src="" loading="lazy"></iframe>
+    <div style="padding:.5rem 1rem;background:rgba(0,0,0,.15);font-size:.72rem;color:var(--t3)">
+      Fonte: <a href="https://mappe.protezionecivile.gov.it" target="_blank" style="color:var(--o)">Dipartimento Protezione Civile</a> · Aggiornamento ogni 5 minuti · Solo dati osservati
+    </div>
+  </div>
+</div>
   <div id="fav-wrap"></div>
   <div id="content">
     <div class="empty">
@@ -326,27 +383,139 @@ function updateFavBtn(){
   b.className="fav-btn"+(isFav?" saved":"");
 }
 function toggleFav(){if(!CUR)return;S.togF(CUR);updateFavBtn();}
+// ══════════════════════════════════════════════════════════════════════
+//  RADAR — Leaflet + Rainviewer API + Protezione Civile
+// ══════════════════════════════════════════════════════════════════════
+let radarMap=null,radarLayers=[],radarFrames=[],radarIdx=0,radarPlaying=false,radarTimer=null,radarMode='rv';
+
 function openRadar(){
-  const lat=CUR?.lat||41.9, lon=CUR?.lon||12.5;
   const panel=document.getElementById("radar-panel");
-  const frame=document.getElementById("radar-frame");
-  if(panel.classList.contains("open")){
-    closeRadar(); return;
-  }
-  // oAP=1 abilita animazione + nowcast 30min, sn=1 mostra snow/nowcast layer
-  // Rainviewer: oAP=1 player, sn=1 nowcast, sm=1 smooth, play=1 autoplay
-  // c=3 colore precipitazioni, o=83 opacità, lm=0 light map
-  frame.src=`https://www.rainviewer.com/map.html?loc=${lat},${lon},10&oFa=0&oC=0&oU=0&oCS=1&oF=0&oAP=1&rmt=2&c=3&o=83&lm=0&layer=radar&sm=1&sn=1&play=1`;
+  if(panel.classList.contains("open")){closeRadar();return;}
   panel.classList.add("open");
   panel.scrollIntoView({behavior:"smooth",block:"start"});
+  if(radarMode==='rv') initRainviewer();
+  else initDPC();
 }
+
 function closeRadar(){
-  const panel=document.getElementById("radar-panel");
-  const frame=document.getElementById("radar-frame");
-  panel.classList.remove("open");
-  // Reset iframe per fermare caricamento
-  setTimeout(()=>{if(!panel.classList.contains("open")) frame.src="";},300);
+  document.getElementById("radar-panel").classList.remove("open");
+  stopRadarPlay();
 }
+
+function switchRadar(mode){
+  radarMode=mode;
+  document.getElementById("tab-rv").classList.toggle("active",mode==="rv");
+  document.getElementById("tab-dpc").classList.toggle("active",mode==="dpc");
+  document.getElementById("radar-rv-wrap").style.display=mode==="rv"?"block":"none";
+  document.getElementById("radar-dpc-wrap").style.display=mode==="dpc"?"block":"none";
+  if(mode==="rv"){stopRadarPlay();initRainviewer();}
+  else initDPC();
+}
+
+function initDPC(){
+  const frame=document.getElementById("radar-frame-dpc");
+  if(!frame.src||frame.src==="about:blank"||frame.src==="")
+    frame.src="https://mappe.protezionecivile.gov.it/it/mappe-e-dashboard-rischi/piattaforma-radar/";
+}
+
+async function initRainviewer(){
+  if(!window.L){
+    await loadScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");
+    loadCSS("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+    await new Promise(r=>setTimeout(r,300));
+  }
+  const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
+  if(!radarMap){
+    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false}).setView([lat,lon],9);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(radarMap);
+  } else {
+    radarMap.setView([lat,lon],9);
+  }
+  await loadRadarFrames();
+}
+
+async function loadRadarFrames(){
+  try{
+    const resp=await fetch("https://api.rainviewer.com/public/weather-maps.json");
+    const data=await resp.json();
+    const host=data.host;
+    const now=Math.floor(Date.now()/1000);
+    const past30=data.radar.past.filter(f=>f.time>=(now-30*60));
+    const nowcast=(data.radar.nowcast||[]).slice(0,3);
+    radarFrames=[...past30.map(f=>({...f,type:"past",host})),...nowcast.map(f=>({...f,type:"nowcast",host}))];
+    radarLayers.forEach(l=>{try{radarMap.removeLayer(l);}catch(e){}});
+    radarLayers=[];
+    radarFrames.forEach(f=>{
+      const layer=L.tileLayer(f.host+f.path+"/256/{z}/{x}/{y}/2/1_1.png",{opacity:0,zIndex:10,maxZoom:19});
+      radarLayers.push(layer);
+      layer.addTo(radarMap);
+    });
+    renderTimeline();
+    radarIdx=past30.length>0?past30.length-1:0;
+    showRadarFrame(radarIdx);
+  }catch(e){console.error("Radar:",e);}
+}
+
+function renderTimeline(){
+  const tl=document.getElementById("radar-timeline");
+  if(!tl)return;
+  tl.innerHTML=radarFrames.map((f,i)=>
+    `<div class="rt-frame ${f.type}" onclick="showRadarFrame(${i})" title="${fmtRT(f.time)}"></div>`
+  ).join("");
+}
+
+function showRadarFrame(i){
+  if(!radarFrames.length)return;
+  if(radarLayers[radarIdx]) radarLayers[radarIdx].setOpacity(0);
+  radarIdx=Math.max(0,Math.min(i,radarFrames.length-1));
+  if(radarLayers[radarIdx]) radarLayers[radarIdx].setOpacity(0.7);
+  const te=document.getElementById("radar-time");
+  if(te) te.textContent=fmtRT(radarFrames[radarIdx].time);
+  document.querySelectorAll(".rt-frame").forEach((el,idx)=>el.classList.toggle("active",idx===radarIdx));
+}
+
+function fmtRT(ts){
+  const d=new Date(ts*1000);
+  const diff=Math.round((ts-Date.now()/1000)/60);
+  const t=d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+  return diff>0?t+" (+"+diff+"')":(diff===0?t+" (ora)":t+" ("+diff+"')");
+}
+
+function radarPrev(){stopRadarPlay();showRadarFrame(radarIdx-1);}
+function radarNext(){stopRadarPlay();showRadarFrame(radarIdx+1);}
+function radarTogglePlay(){radarPlaying?stopRadarPlay():startRadarPlay();}
+
+function startRadarPlay(){
+  radarPlaying=true;
+  const btn=document.getElementById("btn-play");
+  if(btn){btn.textContent="⏸";btn.classList.add("playing");}
+  radarTimer=setInterval(()=>{
+    const next=(radarIdx+1)%radarFrames.length;
+    showRadarFrame(next);
+    if(next===radarFrames.length-1){stopRadarPlay();}
+  },700);
+}
+
+function stopRadarPlay(){
+  radarPlaying=false;
+  clearInterval(radarTimer);
+  const btn=document.getElementById("btn-play");
+  if(btn){btn.textContent="▶";btn.classList.remove("playing");}
+}
+
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[src="${src}"]`)){res();return;}
+    const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+function loadCSS(href){
+  if(document.querySelector(`link[href="${href}"]`))return;
+  const l=document.createElement("link");l.rel="stylesheet";l.href=href;
+  document.head.appendChild(l);
+}
+
 
 // ══════════════════════════════════════════════════════════════════════
 //  GEOCODING
