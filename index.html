@@ -315,7 +315,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       Caricamento radar 3bMeteo...
     </div>
     <iframe id="radar-frame-3b" src="" style="width:100%;height:520px;border:none;display:none"
-      onload="setTimeout(on3bLoad,50)" onerror="setTimeout(on3bError,50)"></iframe>
+      onload="setTimeout(function(){if(typeof on3bLoad==='function')on3bLoad();},100)" onerror="setTimeout(function(){if(typeof on3bError==='function')on3bError();},100)"></iframe>
     <div id="radar-3b-blocked" style="display:none;padding:1.5rem;text-align:center">
       <div style="font-size:.88rem;color:var(--t2);margin-bottom:1rem;line-height:1.6">
         3bMeteo non consente l'integrazione diretta per motivi di sicurezza.<br>
@@ -463,7 +463,7 @@ async function initDPC(){
   }
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
   if(!window.dpcMap){
-    window.dpcMap=L.map("radar-map-dpc",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],8);
+    window.dpcMap=L.map("radar-map-dpc",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],12);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(window.dpcMap);
     window.dpcLayers=[];
     window.dpcFrames=[];
@@ -471,7 +471,7 @@ async function initDPC(){
     window.dpcPlaying=false;
     window.dpcTimer=null;
   } else {
-    window.dpcMap.setView([lat,lon],7);
+    window.dpcMap.setView([lat,lon],12);
   }
   await loadDPCFrames();
 }
@@ -574,11 +574,11 @@ async function initRainviewer(){
   }
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
   if(!radarMap){
-    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],8);
+    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],12);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,maxNativeZoom:19}).addTo(radarMap);
   } else {
     // Ri-centra SEMPRE sulla località attuale
-    radarMap.setView([lat,lon],8);
+    radarMap.setView([lat,lon],12);
     radarMap.invalidateSize();
   }
   await loadRadarFrames();
@@ -1038,7 +1038,7 @@ if("serviceWorker" in navigator){
           if(items.length<4){
             try{
               const vNorm=v.replace(/[''`]/g,"'").replace(/'/g,"%27");
-              const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
+              const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1&countrycodes=it`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
               const d2=await r2.json();
               d2.filter(x=>!["highway","road","path","footway","bus_stop","bus_station","neighbourhood","suburb"].includes(x.type)
                 && !x.display_name?.toLowerCase().startsWith("via ")
@@ -1206,7 +1206,7 @@ function get3bUrl(){
   const slug=name.toLowerCase().replace(/[àáâãäå]/g,"a").replace(/[èéêë]/g,"e")
     .replace(/[ìíîï]/g,"i").replace(/[òóôõö]/g,"o").replace(/[ùúûü]/g,"u")
     .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-  return slug?`https://www.3bmeteo.com/meteo/${slug}/radar`:`https://www.3bmeteo.com/meteo/now`;
+  return "https://www.3bmeteo.com/radar/italia";
 }
 
 var _3bTimeout=null;
