@@ -272,7 +272,8 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     <span class="radar-title">🌧️ Radar Precipitazioni</span>
     <div class="radar-tabs">
       <button class="radar-tab active" id="tab-rv" onclick="switchRadar('rv')">Rainviewer</button>
-      <button class="radar-tab" id="tab-dpc" onclick="switchRadar('dpc')">Protezione Civile</button>
+      <button class="radar-tab" id="tab-dpc" onclick="switchRadar('dpc')">Prot. Civile</button>
+      <button class="radar-tab" id="tab-3b" onclick="switchRadar('3b')">3bMeteo</button>
     </div>
     <button class="radar-close" onclick="closeRadar()">✕</button>
   </div>
@@ -306,6 +307,26 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     </div>
     <div style="padding:.4rem 1rem;background:rgba(0,0,0,.15);font-size:.68rem;color:var(--t3)">
       🇮🇹 Radar Protezione Civile · SRI (intensità pioggia al suolo) · Aggiornamento ogni 5 min · Solo dati osservati
+    </div>
+  </div>
+  <!-- 3bMeteo radar panel -->
+  <div id="radar-3b-wrap" style="display:none">
+    <div id="radar-3b-loading" style="text-align:center;padding:2rem;font-size:.88rem;color:var(--t2)">
+      Caricamento radar 3bMeteo...
+    </div>
+    <iframe id="radar-frame-3b" src="" style="width:100%;height:520px;border:none;display:none"
+      onload="on3bLoad()" onerror="on3bError()"></iframe>
+    <div id="radar-3b-blocked" style="display:none;padding:1.5rem;text-align:center">
+      <div style="font-size:.88rem;color:var(--t2);margin-bottom:1rem;line-height:1.6">
+        3bMeteo non consente l'integrazione diretta per motivi di sicurezza.<br>
+        Si apre in una nuova scheda — nowcast 30 min incluso.
+      </div>
+      <a id="link-3b" href="" target="_blank"
+        style="display:inline-flex;align-items:center;gap:.6rem;background:rgba(240,112,32,.2);
+        border:2px solid var(--o);border-radius:12px;padding:.85rem 1.5rem;color:var(--o2);
+        font-size:.95rem;font-weight:700;text-decoration:none">
+        🌧️ Apri Radar 3bMeteo
+      </a>
     </div>
   </div>
 </div>
@@ -421,12 +442,17 @@ function closeRadar(){
 
 function switchRadar(mode){
   radarMode=mode;
-  document.getElementById("tab-rv").classList.toggle("active",mode==="rv");
-  document.getElementById("tab-dpc").classList.toggle("active",mode==="dpc");
+  ["rv","dpc","3b"].forEach(m=>{
+    const btn=document.getElementById("tab-"+m);
+    if(btn) btn.classList.toggle("active",m===mode);
+  });
   document.getElementById("radar-rv-wrap").style.display=mode==="rv"?"block":"none";
   document.getElementById("radar-dpc-wrap").style.display=mode==="dpc"?"block":"none";
+  const w3b=document.getElementById("radar-3b-wrap");
+  if(w3b) w3b.style.display=mode==="3b"?"block":"none";
   if(mode==="rv"){stopRadarPlay();initRainviewer();}
-  else initDPC();
+  else if(mode==="dpc") initDPC();
+  else if(mode==="3b") init3bRadar();
 }
 
 async function initDPC(){
@@ -551,7 +577,9 @@ async function initRainviewer(){
     radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],8);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,maxNativeZoom:19}).addTo(radarMap);
   } else {
+    // Ri-centra SEMPRE sulla località attuale
     radarMap.setView([lat,lon],8);
+    radarMap.invalidateSize();
   }
   await loadRadarFrames();
 }
@@ -617,6 +645,21 @@ function startRadarPlay(){
     showRadarFrame(next);
     if(next===radarFrames.length-1){stopRadarPlay();}
   },700);
+}
+
+function open3bRadar(){
+  const name = CUR?.name || "";
+  const lat = CUR?.lat || 41.9;
+  const lon = CUR?.lon || 12.5;
+  // 3bMeteo radar — cerca per nome località oppure apre radar Italia
+  const slug = name.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")
+    .replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
+  // Tenta URL con nome città, fallback a radar Italia
+  const url = slug
+    ? `https://www.3bmeteo.com/meteo/${slug}/radar`
+    : `https://www.3bmeteo.com/meteo/now`;
+  window.open(url, "_blank");
 }
 
 function stopRadarPlay(){
