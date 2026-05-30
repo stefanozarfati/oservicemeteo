@@ -231,14 +231,13 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #radar-frame-dpc{width:100%;height:480px;border:none;display:block}
 
 /* Sezioni riordinabili */
-.section-handle{cursor:grab;padding:.2rem .4rem;color:var(--t3);font-size:1rem;
-  margin-right:.4rem;user-select:none;flex-shrink:0}
-.section-handle:hover{color:var(--o)}
-.section-handle:active{cursor:grabbing}
-.card.dragging{opacity:.4;transform:scale(.98)}
-.card.drag-over{border-color:var(--o)!important;box-shadow:0 0 0 2px rgba(240,112,32,.3)}
-.drag-hint{font-size:.62rem;color:var(--t3);text-align:center;margin-bottom:.4rem;
-  opacity:.6;font-style:italic}
+.sec-controls{display:flex;gap:.25rem;margin-left:auto;flex-shrink:0}
+.sec-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--t2);
+  font-size:.8rem;display:flex;align-items:center;justify-content:center;
+  transition:.15s;flex-shrink:0}
+.sec-btn:hover{background:rgba(240,112,32,.2);border-color:var(--o);color:var(--o2)}
+.drag-hint{font-size:.65rem;color:var(--t3);text-align:center;margin-bottom:.5rem;opacity:.7}
 </style>
 </head>
 <body>
@@ -295,11 +294,21 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       <span style="margin-left:auto">Dati: <a href="https://rainviewer.com" target="_blank" style="color:var(--o)">RainViewer</a></span>
     </div>
   </div>
-  <!-- Protezione Civile iframe -->
-  <div id="radar-dpc-wrap" style="display:none">
-    <iframe id="radar-frame-dpc" src="" loading="lazy"></iframe>
-    <div style="padding:.5rem 1rem;background:rgba(0,0,0,.15);font-size:.72rem;color:var(--t3)">
-      Fonte: <a href="https://mappe.protezionecivile.gov.it" target="_blank" style="color:var(--o)">Dipartimento Protezione Civile</a> · Aggiornamento ogni 5 minuti · Solo dati osservati
+  <!-- Protezione Civile — apre in nuova finestra (blocca iframe) -->
+  <div id="radar-dpc-wrap" style="display:none;padding:1.5rem;text-align:center">
+    <div style="font-size:.88rem;color:var(--t2);margin-bottom:1rem;line-height:1.6">
+      Il sito della Protezione Civile non può essere incorporato nell'app per motivi di sicurezza.<br>
+      Si apre in una nuova scheda — aggiornamento ogni 5 minuti, radar ufficiale nazionale.
+    </div>
+    <a id="dpc-link" href="https://mappe.protezionecivile.gov.it/it/mappe-e-dashboard-rischi/piattaforma-radar/" 
+      target="_blank"
+      style="display:inline-flex;align-items:center;gap:.6rem;background:rgba(240,112,32,.2);
+      border:2px solid var(--o);border-radius:12px;padding:.85rem 1.5rem;color:var(--o2);
+      font-size:.95rem;font-weight:700;text-decoration:none;transition:.2s">
+      🇮🇹 Apri Radar Protezione Civile
+    </a>
+    <div style="font-size:.7rem;color:var(--t3);margin-top:.8rem">
+      Fonte: Dipartimento della Protezione Civile · Rete Radar Nazionale · Aggiornamento ogni 5 min
     </div>
   </div>
 </div>
@@ -423,11 +432,7 @@ function switchRadar(mode){
   else initDPC();
 }
 
-function initDPC(){
-  const frame=document.getElementById("radar-frame-dpc");
-  if(!frame.src||frame.src==="about:blank"||frame.src==="")
-    frame.src="https://mappe.protezionecivile.gov.it/it/mappe-e-dashboard-rischi/piattaforma-radar/";
-}
+function initDPC(){} // DPC apre in nuova tab
 
 async function initRainviewer(){
   if(!window.L){
@@ -437,10 +442,10 @@ async function initRainviewer(){
   }
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
   if(!radarMap){
-    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false}).setView([lat,lon],9);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(radarMap);
+    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:6}).setView([lat,lon],6);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:6}).addTo(radarMap);
   } else {
-    radarMap.setView([lat,lon],9);
+    radarMap.setView([lat,lon],6);
   }
   await loadRadarFrames();
 }
@@ -457,7 +462,7 @@ async function loadRadarFrames(){
     radarLayers.forEach(l=>{try{radarMap.removeLayer(l);}catch(e){}});
     radarLayers=[];
     radarFrames.forEach(f=>{
-      const layer=L.tileLayer(f.host+f.path+"/256/{z}/{x}/{y}/2/1_1.png",{opacity:0,zIndex:10,maxZoom:19});
+      const layer=L.tileLayer(f.host+f.path+"/256/{z}/{x}/{y}/2/1_1.png",{opacity:0,zIndex:10,maxZoom:6});
       radarLayers.push(layer);
       layer.addTo(radarMap);
     });
@@ -534,72 +539,59 @@ function loadCSS(href){
 async function geocode(q){
   const results = [];
   const seen = new Set();
-  
-  // Prova prima Open-Meteo con query completa
-  try{
-    const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=it&format=json`);
-    const d=await r.json();
-    if(d.results?.length){
-      d.results.forEach(p=>{
-        const key=`${p.latitude},${p.longitude}`;
-        if(!seen.has(key)){seen.add(key);results.push({lat:p.latitude,lon:p.longitude,name:p.name,region:[p.admin2,p.admin1,p.country].filter(Boolean).join(", ")});}
-      });
-    }
-  }catch(e){}
-  
-  // Se pochi risultati, prova anche Nominatim (trova quartieri, frazioni, monti)
-  if(results.length<3){
-    try{
-      const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&accept-language=it&addressdetails=1`;
-      const r2=await fetch(url,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
-      const d2=await r2.json();
-      d2.filter(x=>!['highway','road','path','footway','bus_stop'].includes(x.type)
-                && !x.display_name?.toLowerCase().startsWith('via ')
-                && !x.display_name?.toLowerCase().startsWith('strada '))
-        .forEach(p=>{
-          const key=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
-          if(!seen.has(key)){
-            seen.add(key);
-            const addr=p.address||{};
-            const name=p.namedetails?.name||addr.neighbourhood||addr.suburb||addr.village||addr.town||addr.city||p.name||q;
-            const region=[addr.city||addr.town||addr.village,addr.county||addr.state_district,addr.state].filter(Boolean).join(", ");
-            results.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,region});
-          }
-        });
-    }catch(e){}
+  const queries = [q];
+  // Se la query contiene "monte"/"piana"/"lago"/"valle" prova anche senza
+  // Se NON contiene "monte" ma sembra un monte, prova ad aggiungerlo
+  const lq = q.toLowerCase();
+  if(!lq.includes("monte ") && !lq.includes("colle ") && !lq.includes("lago ")){
+    // prova anche con prefisso "Monte"
+    queries.push("Monte " + q);
   }
   
+  for(const query of queries){
+    if(results.length >= 5) break;
+    // Open-Meteo geocoding
+    try{
+      const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=it&format=json`);
+      const d=await r.json();
+      if(d.results?.length){
+        d.results.forEach(p=>{
+          const key=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
+          if(!seen.has(key)){
+            seen.add(key);
+            results.push({lat:p.latitude,lon:p.longitude,name:p.name,
+              region:[p.admin2,p.admin1,p.country].filter(Boolean).join(", ")});
+          }
+        });
+      }
+    }catch(e){}
+  }
+
+  // Fallback Nominatim — trova quartieri, frazioni, monti non in OM
+  if(results.length < 3){
+    try{
+      const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&accept-language=it&addressdetails=1&namedetails=1`;
+      const r=await fetch(url,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
+      const d=await r.json();
+      d.filter(x=>!["highway","road","path","footway","bus_stop"].includes(x.type)
+               && !x.display_name?.toLowerCase().startsWith("via ")
+               && !x.display_name?.toLowerCase().startsWith("strada "))
+       .forEach(p=>{
+         const key=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
+         if(!seen.has(key)){
+           seen.add(key);
+           const addr=p.address||{};
+           const name=p.namedetails?.name||addr.neighbourhood||addr.suburb||
+                      addr.village||addr.town||addr.city||p.display_name.split(",")[0];
+           const region=[addr.city||addr.town||addr.village,
+                         addr.county||addr.state_district,addr.state].filter(Boolean).join(", ");
+           results.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,region});
+         }
+       });
+    }catch(e){}
+  }
   return results;
 }
-
-// ══════════════════════════════════════════════════════════════════════
-//  AUTOCOMPLETE
-// ══════════════════════════════════════════════════════════════════════
-let _acT=null;
-const _inp=document.getElementById("inp");
-const _sug=document.getElementById("sug");
-_inp.addEventListener("input",()=>{
-  clearTimeout(_acT);
-  const v=_inp.value.trim();
-  if(v.length<2){_sug.classList.remove("open");return;}
-  _acT=setTimeout(async()=>{
-    const res=await geocode(v);
-    if(!res.length){_sug.classList.remove("open");return;}
-    _sug.innerHTML=res.map(p=>`<div class="si" onclick="selSug(${p.lat},${p.lon},'${escJ(p.name)}','${escJ(p.region)}')">
-      <div class="sn">${escH(p.name)}</div>
-      ${p.region?`<div class="sd">${escH(p.region)}</div>`:""}
-    </div>`).join("");
-    _sug.classList.add("open");
-  },300);
-});
-document.addEventListener("click",e=>{if(!e.target.closest(".srow")&&!e.target.closest(".sug"))_sug.classList.remove("open");});
-function selSug(lat,lon,name,region){_inp.value=name+(region?", "+region:"");_sug.classList.remove("open");fetchWeather(lat,lon,name,region);}
-
-// ══════════════════════════════════════════════════════════════════════
-//  SEARCH
-// ══════════════════════════════════════════════════════════════════════
-document.getElementById("sbtn").addEventListener("click",go);
-_inp.addEventListener("keydown",e=>{if(e.key==="Enter"){_sug.classList.remove("open");go();}});
 
 async function go(){
   const v=_inp.value.trim(); if(!v)return;
@@ -706,17 +698,17 @@ function render(){
 
   document.getElementById("content").innerHTML=`
     <!-- ORE -->
-    <div class="card drag-card" id="sec-hours" draggable="true"><div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>🕐 Ora per ora</div>${renderHourlyInner()}</div>
+    <div class="card drag-card" id="sec-hours"><div class="clabel" style="display:flex;align-items:center"><span style="flex:1">🕐 Ora per ora</span><div class="sec-controls"><button class="sec-btn" onclick="moveSection('sec-hours',-1)" title="Sposta su">↑</button><button class="sec-btn" onclick="moveSection('sec-hours',1)" title="Sposta giù">↓</button></div></div>${renderHourlyInner()}</div>
 
     <!-- 7 GIORNI -->
-    <div class="card drag-card" id="sec-7days" draggable="true">
-      <div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>Previsioni 7 giorni · Tocca per le ore</div>
+    <div class="card drag-card" id="sec-7days">
+      <div class="clabel" style="display:flex;align-items:center"><span style="flex:1">Previsioni 7 giorni · Tocca per le ore</span><div class="sec-controls"><button class="sec-btn" onclick="moveSection('sec-7days',-1)" title="Sposta su">↑</button><button class="sec-btn" onclick="moveSection('sec-7days',1)" title="Sposta giù">↓</button></div></div>
       <div class="fcrow">${fcHtml}</div>
     </div>
     
     <!-- CONDIZIONI ATTUALI -->
-    <div class="card drag-card" id="sec-current" draggable="true">
-      <div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>Condizioni attuali <span class="tag tag-om">OPEN-METEO LIVE</span></div>
+    <div class="card drag-card" id="sec-current">
+      <div class="clabel" style="display:flex;align-items:center"><span style="flex:1">Condizioni attuali <span class="tag tag-om">OPEN-METEO LIVE</span></span><div class="sec-controls"><button class="sec-btn" onclick="moveSection('sec-current',-1)" title="Sposta su">↑</button><button class="sec-btn" onclick="moveSection('sec-current',1)" title="Sposta giù">↓</button></div></div>
       <div class="hero">
         <div class="hico">${wi(cur.weather_code)}</div>
         <div style="flex:1;min-width:150px">
@@ -746,8 +738,8 @@ function render(){
     </div>
 
     <!-- CONSIGLIO OUTDOOR -->
-    <div class="card drag-card" id="sec-advice" draggable="true">
-      <div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>🧭 Consiglio outdoor</div>
+    <div class="card drag-card" id="sec-advice">
+      <div class="clabel" style="display:flex;align-items:center"><span style="flex:1">🧭 Consiglio outdoor</span><div class="sec-controls"><button class="sec-btn" onclick="moveSection('sec-advice',-1)" title="Sposta su">↑</button><button class="sec-btn" onclick="moveSection('sec-advice',1)" title="Sposta giù">↓</button></div></div>
       <div class="cons">${outdoorAdvice()}</div>
     </div>
     <div style="font-size:.68rem;color:var(--t3);text-align:center;margin-top:.3rem">
@@ -770,7 +762,7 @@ function renderModels(dayIdx){
   const convHtml=diff<=2
     ?'<div class="convergenza conv-ok">✅ I tre modelli concordano (±'+diff+'°C) — Alta affidabilità.</div>'
     :'<div class="convergenza conv-warn">⚠️ I modelli divergono di '+diff+'°C — Range possibile: '+Math.min(...maxs)+'–'+Math.max(...maxs)+'°C.</div>';
-  return `<div class="clabel">Confronto modelli — ${dayLabel}</div>
+  return `<div class="clabel" style="display:flex;align-items:center"><span style="flex:1">Confronto modelli — ${dayLabel}</span><div class="sec-controls"><button class="sec-btn" onclick="moveSection('sec-models',-1)" title="Sposta su">↑</button><button class="sec-btn" onclick="moveSection('sec-models',1)" title="Sposta giù">↓</button></div></div>
     <div class="models-grid">
       <div class="model-card">
         <div class="model-name" style="color:#4090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div>
@@ -882,7 +874,46 @@ self.addEventListener("fetch",e=>{
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  DRAG & DROP sezioni
+//  RIORDINAMENTO SEZIONI con pulsanti ↑↓
+// ══════════════════════════════════════════════════════════════════════
+
+function moveSection(id, dir){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const parent = el.parentNode;
+  const siblings = [...parent.querySelectorAll(".drag-card")];
+  const idx = siblings.indexOf(el);
+  if(dir === -1 && idx > 0){
+    parent.insertBefore(el, siblings[idx-1]);
+  } else if(dir === 1 && idx < siblings.length-1){
+    parent.insertBefore(siblings[idx+1], el);
+  }
+  saveOrder();
+}
+
+function saveOrder(){
+  const cards = [...document.querySelectorAll(".drag-card")];
+  localStorage.setItem(SECTION_ORDER_KEY, JSON.stringify(cards.map(c=>c.id)));
+}
+
+function restoreOrder(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SECTION_ORDER_KEY)||"null");
+    if(!saved) return;
+    const container = document.getElementById("content");
+    if(!container) return;
+    saved.forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) container.appendChild(el);
+    });
+  }catch(e){}
+}
+
+function initDragAndDrop(){
+  // Versione semplificata — usa pulsanti ↑↓, no drag HTML5
+}
+
+
 // ══════════════════════════════════════════════════════════════════════
 const SECTION_ORDER_KEY = "osm_section_order";
 const DEFAULT_ORDER = ["sec-hours","sec-7days","sec-current","sec-models","sec-advice"];
