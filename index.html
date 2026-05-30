@@ -932,7 +932,7 @@ function renderModels(dayIdx){
 }
 
 function renderHourlyInner(){
-  const lbl='<div class="clabel">🕐 Ora per ora <span class="tag tag-om">OPEN-METEO</span></div>';
+  const lbl=''; // clabel già nel wrapper sec-hours
   if(!wxData)return lbl+'<div style="color:var(--t3);font-size:.85rem">Nessun dato.</div>';
   const h=wxData.main.hourly, d=wxData.main.daily;
   if(!d?.time||selDay>=d.time.length)return lbl+'<div style="color:var(--t3)">Nessun dato.</div>';
@@ -1039,9 +1039,12 @@ if("serviceWorker" in navigator){
             try{
               const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
               const d2=await r2.json();
-              d2.filter(x=>!["highway","road","path","footway"].includes(x.type)
+              d2.filter(x=>!["highway","road","path","footway","bus_stop","bus_station","neighbourhood","suburb"].includes(x.type)
                 && !x.display_name?.toLowerCase().startsWith("via ")
-                && !x.display_name?.toLowerCase().startsWith("strada "))
+                && !x.display_name?.toLowerCase().startsWith("strada ")
+                && !x.display_name?.toLowerCase().startsWith("nomentana")
+                && !(x.type==="residential")
+                && !(x.class==="highway"))
                .forEach(p=>{
                 const key=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
                 if(!seen.has(key)){
@@ -1049,11 +1052,15 @@ if("serviceWorker" in navigator){
                   const addr=p.address||{};
                   const name=p.namedetails?.name||addr.village||addr.town||addr.city||p.display_name.split(",")[0];
                   const det=[addr.city||addr.town,addr.county||addr.state_district,addr.state||addr.country].filter(Boolean).join(", ");
-                  items.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,det});
+                  // Priorità: monti e luoghi naturali in cima
+                const priority=(p.type==="peak"||p.type==="hill"||p.class==="natural"||p.class==="leisure")?-1:0;
+                items.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,det,priority});
                 }
               });
             }catch(e){}
           }
+          // Ordina: monti/naturali prima
+          items.sort((a,b)=>(a.priority||0)-(b.priority||0));
           if(!items.length){_asug.classList.remove("open");return;}
           _asug.innerHTML=items.slice(0,6).map(p=>`<div class="si" onclick="selSug(${p.lat},${p.lon},'${escJ(p.name)}','${escJ(p.det)}')">`+
             `<div class="sn">${escH(p.name)}</div>`+
@@ -1245,6 +1252,14 @@ function on3bError(){
   var blocked=document.getElementById("radar-3b-blocked");
   if(loading) loading.style.display="none";
   if(blocked) blocked.style.display="block";
+}
+
+function selSug(lat,lon,name,region){
+  var inp=document.getElementById("inp");
+  var sug=document.getElementById("sug");
+  if(inp) inp.value=name+(region?", "+region:"");
+  if(sug) sug.classList.remove("open");
+  fetchWeather(lat,lon,name,region);
 }
 </script>
 </body>
