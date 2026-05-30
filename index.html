@@ -229,6 +229,16 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   background:rgba(0,0,0,.15);font-size:.68rem;color:var(--t3);flex-wrap:wrap}
 .rl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 #radar-frame-dpc{width:100%;height:480px;border:none;display:block}
+
+/* Sezioni riordinabili */
+.section-handle{cursor:grab;padding:.2rem .4rem;color:var(--t3);font-size:1rem;
+  margin-right:.4rem;user-select:none;flex-shrink:0}
+.section-handle:hover{color:var(--o)}
+.section-handle:active{cursor:grabbing}
+.card.dragging{opacity:.4;transform:scale(.98)}
+.card.drag-over{border-color:var(--o)!important;box-shadow:0 0 0 2px rgba(240,112,32,.3)}
+.drag-hint{font-size:.62rem;color:var(--t3);text-align:center;margin-bottom:.4rem;
+  opacity:.6;font-style:italic}
 </style>
 </head>
 <body>
@@ -294,6 +304,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   </div>
 </div>
   <div id="fav-wrap"></div>
+  <div id="drag-hint" class="drag-hint" style="display:none">⠿ Tieni premuto e trascina le sezioni per riordinarle</div>
   <div id="content">
     <div class="empty">
       <div class="ebig">🌲</div>
@@ -695,17 +706,17 @@ function render(){
 
   document.getElementById("content").innerHTML=`
     <!-- ORE -->
-    <div class="card" id="hcard">${renderHourly()}</div>
+    <div class="card drag-card" id="sec-hours" draggable="true"><div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>🕐 Ora per ora</div>${renderHourlyInner()}</div>
 
     <!-- 7 GIORNI -->
-    <div class="card">
-      <div class="clabel">Previsioni 7 giorni · Tocca per le ore</div>
+    <div class="card drag-card" id="sec-7days" draggable="true">
+      <div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>Previsioni 7 giorni · Tocca per le ore</div>
       <div class="fcrow">${fcHtml}</div>
     </div>
     
     <!-- CONDIZIONI ATTUALI -->
-    <div class="card">
-      <div class="clabel">Condizioni attuali <span class="tag tag-om">OPEN-METEO LIVE</span></div>
+    <div class="card drag-card" id="sec-current" draggable="true">
+      <div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>Condizioni attuali <span class="tag tag-om">OPEN-METEO LIVE</span></div>
       <div class="hero">
         <div class="hico">${wi(cur.weather_code)}</div>
         <div style="flex:1;min-width:150px">
@@ -730,13 +741,13 @@ function render(){
     </div>
 
     <!-- CONFRONTO MODELLI -->
-    <div class="card" id="models-card">
-      ${renderModels(0)}
+    <div class="card drag-card" id="sec-models" draggable="true">
+      <div id="models-inner">${renderModels(0)}</div>
     </div>
 
     <!-- CONSIGLIO OUTDOOR -->
-    <div class="card">
-      <div class="clabel">🧭 Consiglio per chi lavora all'aperto</div>
+    <div class="card drag-card" id="sec-advice" draggable="true">
+      <div class="clabel" style="display:flex;align-items:center"><span class="section-handle" title="Trascina per riordinare">⠿</span>🧭 Consiglio outdoor</div>
       <div class="cons">${outdoorAdvice()}</div>
     </div>
     <div style="font-size:.68rem;color:var(--t3);text-align:center;margin-top:.3rem">
@@ -779,8 +790,8 @@ function renderModels(dayIdx){
     </div>${convHtml}`;
 }
 
-function renderHourly(){
-  const lbl='<div class="clabel">🕐 Ore per ora <span class="tag tag-om">OPEN-METEO</span></div>';
+function renderHourlyInner(){
+  const lbl='<div class="clabel">🕐 Ora per ora <span class="tag tag-om">OPEN-METEO</span></div>';
   if(!wxData)return lbl+'<div style="color:var(--t3);font-size:.85rem">Nessun dato.</div>';
   const h=wxData.main.hourly, d=wxData.main.daily;
   if(!d?.time||selDay>=d.time.length)return lbl+'<div style="color:var(--t3)">Nessun dato.</div>';
@@ -818,9 +829,18 @@ function renderHourly(){
 function changeDay(i){
   selDay=i;
   document.querySelectorAll(".fcd").forEach((el,idx)=>el.classList.toggle("act",idx===i));
-  const hc=document.getElementById("hcard");
-  if(hc) hc.innerHTML=renderHourly();
-  const mc=document.getElementById("models-card");
+  const hc=document.getElementById("sec-hours");
+  if(hc){
+    const inner=hc.querySelector(".hscroll")?.parentNode;
+    // Aggiorna solo il contenuto interno mantenendo l'handle
+    const tmp=document.createElement("div");
+    tmp.innerHTML=renderHourlyInner();
+    // Sostituisci tutto tranne il primo clabel
+    const clabel=hc.querySelector(".clabel");
+    while(hc.children.length>1) hc.removeChild(hc.lastChild);
+    hc.insertAdjacentHTML("beforeend",renderHourlyInner().replace(/<div class="clabel">[^<]*(?:<[^>]*>[^<]*<\/[^>]*>)*[^<]*<\/div>/,""));
+  }
+  const mc=document.getElementById("models-inner");
   if(mc) mc.innerHTML=renderModels(i);
   if(hc) hc.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
@@ -860,6 +880,77 @@ self.addEventListener("fetch",e=>{
     navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
   });
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  DRAG & DROP sezioni
+// ══════════════════════════════════════════════════════════════════════
+const SECTION_ORDER_KEY = "osm_section_order";
+const DEFAULT_ORDER = ["sec-hours","sec-7days","sec-current","sec-models","sec-advice"];
+
+function initDragAndDrop(){
+  const container = document.getElementById("content");
+  if(!container) return;
+  let dragSrc = null;
+
+  container.addEventListener("dragstart", e=>{
+    const card = e.target.closest(".drag-card");
+    if(!card) return;
+    dragSrc = card;
+    card.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", card.id);
+  });
+  container.addEventListener("dragend", e=>{
+    document.querySelectorAll(".drag-card").forEach(c=>{
+      c.classList.remove("dragging","drag-over");
+    });
+    saveOrder();
+  });
+  container.addEventListener("dragover", e=>{
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const card = e.target.closest(".drag-card");
+    if(!card || card===dragSrc) return;
+    document.querySelectorAll(".drag-card").forEach(c=>c.classList.remove("drag-over"));
+    card.classList.add("drag-over");
+  });
+  container.addEventListener("dragleave", e=>{
+    const card = e.target.closest(".drag-card");
+    if(card) card.classList.remove("drag-over");
+  });
+  container.addEventListener("drop", e=>{
+    e.preventDefault();
+    const card = e.target.closest(".drag-card");
+    if(!card || !dragSrc || card===dragSrc) return;
+    card.classList.remove("drag-over");
+    const cards = [...container.querySelectorAll(".drag-card")];
+    const srcIdx = cards.indexOf(dragSrc);
+    const dstIdx = cards.indexOf(card);
+    if(srcIdx < dstIdx) card.after(dragSrc);
+    else card.before(dragSrc);
+    saveOrder();
+  });
+}
+
+function saveOrder(){
+  const cards = [...document.querySelectorAll(".drag-card")];
+  const order = cards.map(c=>c.id);
+  localStorage.setItem(SECTION_ORDER_KEY, JSON.stringify(order));
+}
+
+function restoreOrder(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(SECTION_ORDER_KEY)||"null");
+    if(!saved) return;
+    const container = document.getElementById("content");
+    if(!container) return;
+    saved.forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) container.appendChild(el);
+    });
+  }catch(e){}
+}
+
 </script>
 </body>
 </html>
