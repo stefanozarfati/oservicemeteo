@@ -437,7 +437,7 @@ async function initDPC(){
   }
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
   if(!window.dpcMap){
-    window.dpcMap=L.map("radar-map-dpc",{zoomControl:true,attributionControl:false}).setView([lat,lon],7);
+    window.dpcMap=L.map("radar-map-dpc",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],8);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(window.dpcMap);
     window.dpcLayers=[];
     window.dpcFrames=[];
@@ -484,7 +484,9 @@ function renderDPCLayersWMS(){
       version:"1.1.1",
       time: f.wmsTime,
       opacity:0,
-      zIndex:10
+      zIndex:10,
+      width:512,
+      height:512
     });
     window.dpcLayers.push(layer);
     layer.addTo(window.dpcMap);
@@ -546,10 +548,10 @@ async function initRainviewer(){
   }
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
   if(!radarMap){
-    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:7}).setView([lat,lon],7);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(radarMap);
+    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],8);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,maxNativeZoom:19}).addTo(radarMap);
   } else {
-    radarMap.setView([lat,lon],7);
+    radarMap.setView([lat,lon],8);
   }
   await loadRadarFrames();
 }
@@ -562,11 +564,12 @@ async function loadRadarFrames(){
     const now=Math.floor(Date.now()/1000);
     const past30=data.radar.past.filter(f=>f.time>=(now-30*60));
     const nowcast=(data.radar.nowcast||[]).slice(0,3);
+    console.log("Rainviewer past30:", past30.length, "nowcast:", nowcast.length);
     radarFrames=[...past30.map(f=>({...f,type:"past",host})),...nowcast.map(f=>({...f,type:"nowcast",host}))];
     radarLayers.forEach(l=>{try{radarMap.removeLayer(l);}catch(e){}});
     radarLayers=[];
     radarFrames.forEach(f=>{
-      const layer=L.tileLayer(f.host+f.path+"/512/{z}/{x}/{y}/4/1_1.png",{opacity:0,zIndex:10,maxZoom:7,tileSize:512,zoomOffset:-1});
+      const layer=L.tileLayer(f.host+f.path+"/512/{z}/{x}/{y}/4/1_1.png",{opacity:0,zIndex:10,maxNativeZoom:6,maxZoom:14,tileSize:512,zoomOffset:-1});
       radarLayers.push(layer);
       layer.addTo(radarMap);
     });
@@ -962,7 +965,36 @@ document.getElementById("ibtn").addEventListener("click",async()=>{if(dP){dP.pro
 
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-  initAutocomplete();
+  // ── Autocomplete inline ──────────────────────────────────────
+  let _acT=null;
+  const _ainp=document.getElementById("inp");
+  const _asug=document.getElementById("sug");
+  if(_ainp&&_asug){
+    _ainp.addEventListener("input",()=>{
+      clearTimeout(_acT);
+      const v=_ainp.value.trim();
+      if(v.length<2){_asug.classList.remove("open");return;}
+      _acT=setTimeout(async()=>{
+        try{
+          const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=6&language=it&format=json`);
+          const d=await r.json();
+          if(!d.results?.length){_asug.classList.remove("open");return;}
+          _asug.innerHTML=d.results.map(p=>{
+            const det=[p.admin2,p.admin1,p.country].filter(Boolean).join(", ");
+            return `<div class="si" onclick="selSug(${p.latitude},${p.longitude},'${escJ(p.name)}','${escJ(p.admin1||"")}')">`+
+              `<div class="sn">${escH(p.name)}</div>`+
+              (det?`<div class="sd">${escH(det)}</div>`:"")+
+              `</div>`;
+          }).join("");
+          _asug.classList.add("open");
+        }catch(e){_asug.classList.remove("open");}
+      },300);
+    });
+    document.addEventListener("click",e=>{
+      if(!e.target.closest(".srow")&&!e.target.closest(".sug")) _asug.classList.remove("open");
+    });
+  }
+  // ── Fine autocomplete ─────────────────────────────────────────
     const sw=`const C="osm-v5";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x))))));
