@@ -412,6 +412,9 @@ function renderRecPanel(){
 function rmFav(name){S.sF(S.gF().filter(x=>x.name!==name));document.getElementById("pnl-fav").innerHTML=renderFavPanel();updateFavBtn();}
 function quickFetch(lat,lon,name,region){
   ["pnl-fav","pnl-rec"].forEach(x=>{const el=document.getElementById(x);if(el)el.classList.remove("open");});
+  // Mostra la località nel campo di ricerca
+  const inp=document.getElementById("inp");
+  if(inp) inp.value=name+(region?", "+region:"");
   fetchWeather(lat,lon,name,region);
 }
 function updateFavBtn(){
