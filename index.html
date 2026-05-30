@@ -674,33 +674,36 @@ async function geocode(q){
   
   for(const query of queries){
     if(results.length >= 5) break;
-    // 1. Photon — trova frazioni, monti, piccole località italiane
+    // 1. Open-Meteo — veloce, affidabile, buono per città
     try{
-      const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=it&bbox=6.6,35.5,18.5,47.1`);
+      const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=it&format=json`);
       const d=await r.json();
-      (d.features||[]).forEach(f=>{
-        const p=f.properties;
-        if(!p||!f.geometry) return;
-        const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
-        const key=`${lat.toFixed(2)},${lon.toFixed(2)}`;
-        if(seen.has(key)||["street","road","path"].includes(p.type)) return;
-        seen.add(key);
-        const name=p.name||p.city||p.town||p.village||query;
-        const region=[p.city||p.town||p.village,p.county,p.state,p.country].filter(Boolean).filter(x=>x!==name).join(", ");
-        results.push({lat,lon,name,region});
+      (d.results||[]).forEach(p=>{
+        const key=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
+        if(!seen.has(key)){
+          seen.add(key);
+          results.push({lat:p.latitude,lon:p.longitude,name:p.name,
+            region:[p.admin2,p.admin1,p.country].filter(Boolean).join(", ")});
+        }
       });
     }catch(e){}
-    // 2. Open-Meteo fallback
+    // 2. Nominatim — trova frazioni, monti, quartieri italiani
     if(results.length<3){
       try{
-        const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=4&language=it&format=json`);
-        const d=await r.json();
-        (d.results||[]).forEach(p=>{
-          const key=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
+        const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1&countrycodes=it`,
+          {headers:{"User-Agent":"OServiceMeteo/1.0"}});
+        const d2=await r2.json();
+        d2.filter(x=>!["highway","road","path","footway","bus_stop"].includes(x.type)
+             && !x.display_name?.toLowerCase().startsWith("via ")
+             && !x.display_name?.toLowerCase().startsWith("strada "))
+         .forEach(p=>{
+          const key=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
           if(!seen.has(key)){
             seen.add(key);
-            results.push({lat:p.latitude,lon:p.longitude,name:p.name,
-              region:[p.admin2,p.admin1,p.country].filter(Boolean).join(", ")});
+            const addr=p.address||{};
+            const name=p.namedetails?.name||addr.village||addr.hamlet||addr.town||addr.city||p.display_name.split(",")[0];
+            const region=[addr.city||addr.town||addr.village,addr.county||addr.state_district,addr.state].filter(Boolean).join(", ");
+            results.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,region});
           }
         });
       }catch(e){}
@@ -1012,38 +1015,37 @@ if("serviceWorker" in navigator){
         try{
           const seen=new Set();
           const items=[];
-          // 1. Photon (Komoot) — eccellente per Italia, trova frazioni e monti
+          // 1. Open-Meteo — veloce e stabile
           try{
-            const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(v)}&limit=5&lang=it&bbox=6.6,35.5,18.5,47.1`);
+            const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=5&language=it&format=json`);
             const d=await r.json();
-            (d.features||[]).forEach(f=>{
-              const p=f.properties;
-              if(!p||!f.geometry) return;
-              const lat=f.geometry.coordinates[1];
-              const lon=f.geometry.coordinates[0];
-              const key=`${lat.toFixed(2)},${lon.toFixed(2)}`;
-              if(seen.has(key)) return;
-              // Escludi strade
-              if(["street","road","path"].includes(p.type)) return;
-              if(p.name?.toLowerCase().startsWith("via ")) return;
-              seen.add(key);
-              const name=p.name||p.city||p.town||p.village||"";
-              const det=[p.city||p.town||p.village,p.county,p.state].filter(Boolean).filter(x=>x!==name).join(", ");
-              const priority=(p.type==="peak"||p.osm_value==="peak"||p.osm_value==="hill")?-1:0;
-              items.push({lat,lon,name,det,priority});
+            (d.results||[]).forEach(p=>{
+              const key=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
+              if(!seen.has(key)){
+                seen.add(key);
+                const det=[p.admin2,p.admin1,p.country].filter(Boolean).join(", ");
+                items.push({lat:p.latitude,lon:p.longitude,name:p.name,det,priority:0});
+              }
             });
           }catch(e){}
-          // 2. Open-Meteo come fallback per città grandi
-          if(items.length<3){
+          // 2. Nominatim — frazioni, monti, quartieri italiani
+          if(items.length<4){
             try{
-              const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=4&language=it&format=json`);
-              const d=await r.json();
-              (d.results||[]).forEach(p=>{
-                const key=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
+              const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1&countrycodes=it`,
+                {headers:{"User-Agent":"OServiceMeteo/1.0"}});
+              const d2=await r2.json();
+              d2.filter(x=>!["highway","road","path","footway","bus_stop"].includes(x.type)
+                   && !x.display_name?.toLowerCase().startsWith("via ")
+                   && !x.display_name?.toLowerCase().startsWith("strada "))
+               .forEach(p=>{
+                const key=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
                 if(!seen.has(key)){
                   seen.add(key);
-                  const det=[p.admin2,p.admin1].filter(Boolean).join(", ");
-                  items.push({lat:p.latitude,lon:p.longitude,name:p.name,det,priority:0});
+                  const addr=p.address||{};
+                  const name=p.namedetails?.name||addr.village||addr.hamlet||addr.town||addr.city||p.display_name.split(",")[0];
+                  const det=[addr.city||addr.town||addr.village,addr.county,addr.state].filter(Boolean).join(", ");
+                  const priority=(p.type==="peak"||p.type==="hill"||p.class==="natural")?-1:0;
+                  items.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,det,priority});
                 }
               });
             }catch(e){}
