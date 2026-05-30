@@ -1019,19 +1019,49 @@ if("serviceWorker" in navigator){
       if(v.length<2){_asug.classList.remove("open");return;}
       _acT=setTimeout(async()=>{
         try{
-          const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=6&language=it&format=json`);
-          const d=await r.json();
-          if(!d.results?.length){_asug.classList.remove("open");return;}
-          _asug.innerHTML=d.results.map(p=>{
-            const det=[p.admin2,p.admin1,p.country].filter(Boolean).join(", ");
-            return `<div class="si" onclick="selSug(${p.latitude},${p.longitude},'${escJ(p.name)}','${escJ(p.admin1||"")}')">`+
-              `<div class="sn">${escH(p.name)}</div>`+
-              (det?`<div class="sd">${escH(det)}</div>`:"")+
-              `</div>`;
-          }).join("");
+          const seen=new Set();
+          const items=[];
+          // 1. Open-Meteo geocoding (veloce, buono per città)
+          try{
+            const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=5&language=it&format=json`);
+            const d=await r.json();
+            (d.results||[]).forEach(p=>{
+              const key=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
+              if(!seen.has(key)){
+                seen.add(key);
+                const det=[p.admin2,p.admin1,p.country].filter(Boolean).join(", ");
+                items.push({lat:p.latitude,lon:p.longitude,name:p.name,det});
+              }
+            });
+          }catch(e){}
+          // 2. Nominatim (trova frazioni, monti, parchi, quartieri)
+          if(items.length<4){
+            try{
+              const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
+              const d2=await r2.json();
+              d2.filter(x=>!["highway","road","path","footway"].includes(x.type)
+                && !x.display_name?.toLowerCase().startsWith("via ")
+                && !x.display_name?.toLowerCase().startsWith("strada "))
+               .forEach(p=>{
+                const key=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
+                if(!seen.has(key)){
+                  seen.add(key);
+                  const addr=p.address||{};
+                  const name=p.namedetails?.name||addr.village||addr.town||addr.city||p.display_name.split(",")[0];
+                  const det=[addr.city||addr.town,addr.county||addr.state_district,addr.state||addr.country].filter(Boolean).join(", ");
+                  items.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,det});
+                }
+              });
+            }catch(e){}
+          }
+          if(!items.length){_asug.classList.remove("open");return;}
+          _asug.innerHTML=items.slice(0,6).map(p=>`<div class="si" onclick="selSug(${p.lat},${p.lon},'${escJ(p.name)}','${escJ(p.det)}')">`+
+            `<div class="sn">${escH(p.name)}</div>`+
+            (p.det?`<div class="sd">${escH(p.det)}</div>`:"")+
+            `</div>`).join("");
           _asug.classList.add("open");
         }catch(e){_asug.classList.remove("open");}
-      },300);
+      },400);
     });
     document.addEventListener("click",e=>{
       if(!e.target.closest(".srow")&&!e.target.closest(".sug")) _asug.classList.remove("open");
@@ -1161,6 +1191,61 @@ function restoreOrder(){
   }catch(e){}
 }
 
+
+// ── 3bMeteo Radar ─────────────────────────────────────────────────────────
+function get3bUrl(){
+  const name=CUR?.name||"";
+  const slug=name.toLowerCase().replace(/[àáâãäå]/g,"a").replace(/[èéêë]/g,"e")
+    .replace(/[ìíîï]/g,"i").replace(/[òóôõö]/g,"o").replace(/[ùúûü]/g,"u")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  return slug?`https://www.3bmeteo.com/meteo/${slug}/radar`:`https://www.3bmeteo.com/meteo/now`;
+}
+
+var _3bTimeout=null;
+function init3bRadar(){
+  var url=get3bUrl();
+  var frame=document.getElementById("radar-frame-3b");
+  var loading=document.getElementById("radar-3b-loading");
+  var blocked=document.getElementById("radar-3b-blocked");
+  var link=document.getElementById("link-3b");
+  if(!frame) return;
+  if(loading) loading.style.display="block";
+  if(blocked) blocked.style.display="none";
+  frame.style.display="none";
+  if(link) link.href=url;
+  clearTimeout(_3bTimeout);
+  _3bTimeout=setTimeout(function(){
+    if(loading) loading.style.display="none";
+    frame.style.display="none";
+    if(blocked) blocked.style.display="block";
+  },4000);
+  frame.src=url;
+}
+
+function on3bLoad(){
+  clearTimeout(_3bTimeout);
+  var frame=document.getElementById("radar-frame-3b");
+  var loading=document.getElementById("radar-3b-loading");
+  var blocked=document.getElementById("radar-3b-blocked");
+  try{
+    var doc=frame.contentDocument||frame.contentWindow.document;
+    if(!doc||!doc.body||doc.body.innerHTML==="") throw new Error("blocked");
+    if(loading) loading.style.display="none";
+    frame.style.display="block";
+  }catch(e){
+    if(loading) loading.style.display="none";
+    frame.style.display="none";
+    if(blocked) blocked.style.display="block";
+  }
+}
+
+function on3bError(){
+  clearTimeout(_3bTimeout);
+  var loading=document.getElementById("radar-3b-loading");
+  var blocked=document.getElementById("radar-3b-blocked");
+  if(loading) loading.style.display="none";
+  if(blocked) blocked.style.display="block";
+}
 </script>
 </body>
 </html>
