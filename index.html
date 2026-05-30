@@ -955,7 +955,9 @@ function renderHourlyInner(){
   const dayDate=d.time[selDay];
   const srH=d.sunrise[selDay]?parseInt(d.sunrise[selDay].substring(11,13)):6;
   const ssH=d.sunset[selDay]?parseInt(d.sunset[selDay].substring(11,13)):20;
-  const nowStr=new Date().toISOString().substring(0,13);
+  // Usa ora locale (non UTC) per evidenziare l'ora corrente
+  const _n=new Date();
+  const nowStr=`${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}T${String(_n.getHours()).padStart(2,'0')}`;
   const hours=[];
   for(let i=0;i<h.time.length;i++){
     if(h.time[i].startsWith(dayDate))hours.push({
