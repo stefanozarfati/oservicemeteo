@@ -294,21 +294,18 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       <span style="margin-left:auto">Dati: <a href="https://rainviewer.com" target="_blank" style="color:var(--o)">RainViewer</a></span>
     </div>
   </div>
-  <!-- Protezione Civile — apre in nuova finestra (blocca iframe) -->
-  <div id="radar-dpc-wrap" style="display:none;padding:1.5rem;text-align:center">
-    <div style="font-size:.88rem;color:var(--t2);margin-bottom:1rem;line-height:1.6">
-      Il sito della Protezione Civile non può essere incorporato nell'app per motivi di sicurezza.<br>
-      Si apre in una nuova scheda — aggiornamento ogni 5 minuti, radar ufficiale nazionale.
+  <!-- Protezione Civile — mappa Leaflet con WMTS ufficiale -->
+  <div id="radar-dpc-wrap" style="display:none">
+    <div id="radar-map-dpc" style="width:100%;height:420px"></div>
+    <div id="radar-dpc-controls" style="display:flex;align-items:center;gap:.5rem;padding:.65rem 1rem;background:rgba(0,0,0,.25);flex-wrap:wrap">
+      <button class="radar-ctrl-btn" onclick="dpcPrev()">◀</button>
+      <button class="radar-ctrl-btn" id="btn-dpc-play" onclick="dpcTogglePlay()">▶</button>
+      <button class="radar-ctrl-btn" onclick="dpcNext()">▶▶</button>
+      <div id="dpc-timeline" style="flex:1;min-width:0;display:flex;gap:3px;align-items:center"></div>
+      <div id="dpc-time" style="font-size:.78rem;color:var(--o2);font-weight:700;min-width:80px;text-align:center;font-family:sans-serif">--:--</div>
     </div>
-    <a id="dpc-link" href="https://mappe.protezionecivile.gov.it/it/mappe-e-dashboard-rischi/piattaforma-radar/" 
-      target="_blank"
-      style="display:inline-flex;align-items:center;gap:.6rem;background:rgba(240,112,32,.2);
-      border:2px solid var(--o);border-radius:12px;padding:.85rem 1.5rem;color:var(--o2);
-      font-size:.95rem;font-weight:700;text-decoration:none;transition:.2s">
-      🇮🇹 Apri Radar Protezione Civile
-    </a>
-    <div style="font-size:.7rem;color:var(--t3);margin-top:.8rem">
-      Fonte: Dipartimento della Protezione Civile · Rete Radar Nazionale · Aggiornamento ogni 5 min
+    <div style="padding:.4rem 1rem;background:rgba(0,0,0,.15);font-size:.68rem;color:var(--t3)">
+      🇮🇹 Radar Protezione Civile · SRI (intensità pioggia al suolo) · Aggiornamento ogni 5 min · Solo dati osservati
     </div>
   </div>
 </div>
@@ -432,7 +429,126 @@ function switchRadar(mode){
   else initDPC();
 }
 
-function initDPC(){} // DPC apre in nuova tab
+async function initDPC(){
+  if(!window.L){
+    await loadScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");
+    loadCSS("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+    await new Promise(r=>setTimeout(r,300));
+  }
+  const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
+  if(!window.dpcMap){
+    window.dpcMap=L.map("radar-map-dpc",{zoomControl:true,attributionControl:false}).setView([lat,lon],7);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(window.dpcMap);
+    window.dpcLayers=[];
+    window.dpcFrames=[];
+    window.dpcIdx=0;
+    window.dpcPlaying=false;
+    window.dpcTimer=null;
+  } else {
+    window.dpcMap.setView([lat,lon],7);
+  }
+  await loadDPCFrames();
+}
+
+async function loadDPCFrames(){
+  try{
+    // Usa REST API DPC per trovare gli ultimi frame SRI (30 min = 6 frame x 5min)
+    const resp = await fetch("https://radar-api.protezionecivile.it/wide/radar/CAPPI/SRI/last/6");
+    const data = await resp.json();
+    const frames = Array.isArray(data) ? data : (data.products||data.items||[]);
+    if(!frames.length){ loadDPCFramesFallback(); return; }
+    window.dpcFrames = frames.map(f=>({
+      time: new Date(f.datetime||f.time||f.timestamp).getTime()/1000,
+      url: f.url||f.link
+    })).sort((a,b)=>a.time-b.time);
+    renderDPCLayers();
+  }catch(e){
+    loadDPCFramesFallback();
+  }
+}
+
+async function loadDPCFramesFallback(){
+  // Fallback: costruisci URL WMS con timestamp degli ultimi 30 min
+  const now = new Date();
+  const frames = [];
+  for(let i=5;i>=0;i--){
+    const t = new Date(now - i*5*60*1000);
+    // Arrotonda ai 5 minuti
+    t.setSeconds(0,0);
+    t.setMinutes(Math.floor(t.getMinutes()/5)*5);
+    frames.push({
+      time: t.getTime()/1000,
+      wmsTime: t.toISOString().slice(0,16)+":00Z"
+    });
+  }
+  window.dpcFrames = frames;
+  renderDPCLayersWMS();
+}
+
+function renderDPCLayersWMS(){
+  window.dpcLayers.forEach(l=>{try{window.dpcMap.removeLayer(l);}catch(e){}});
+  window.dpcLayers=[];
+  window.dpcFrames.forEach(f=>{
+    const layer = L.tileLayer.wms("https://radar-geowebcache.protezionecivile.it/service/wms",{
+      layers:"radar:sri",
+      format:"image/png",
+      transparent:true,
+      version:"1.1.1",
+      time: f.wmsTime,
+      opacity:0,
+      zIndex:10
+    });
+    window.dpcLayers.push(layer);
+    layer.addTo(window.dpcMap);
+  });
+  renderDPCTimeline();
+  window.dpcIdx=window.dpcFrames.length-1;
+  showDPCFrame(window.dpcIdx);
+}
+
+function renderDPCLayers(){
+  window.dpcLayers.forEach(l=>{try{window.dpcMap.removeLayer(l);}catch(e){}});
+  window.dpcLayers=[];
+  window.dpcFrames.forEach(f=>{
+    const layer = L.imageOverlay(f.url,[[35,6],[48,20]],{opacity:0,zIndex:10});
+    window.dpcLayers.push(layer);
+    layer.addTo(window.dpcMap);
+  });
+  renderDPCTimeline();
+  window.dpcIdx=window.dpcFrames.length-1;
+  showDPCFrame(window.dpcIdx);
+}
+
+function renderDPCTimeline(){
+  const tl=document.getElementById("dpc-timeline");
+  if(!tl)return;
+  tl.innerHTML=window.dpcFrames.map((f,i)=>
+    `<div class="rt-frame past" onclick="showDPCFrame(${i})" title="${fmtRT(f.time)}" style="cursor:pointer"></div>`
+  ).join("");
+}
+
+function showDPCFrame(i){
+  if(!window.dpcFrames.length)return;
+  if(window.dpcLayers[window.dpcIdx]) window.dpcLayers[window.dpcIdx].setOpacity(0);
+  window.dpcIdx=Math.max(0,Math.min(i,window.dpcFrames.length-1));
+  if(window.dpcLayers[window.dpcIdx]) window.dpcLayers[window.dpcIdx].setOpacity(0.75);
+  const te=document.getElementById("dpc-time");
+  if(te) te.textContent=fmtRT(window.dpcFrames[window.dpcIdx].time);
+  document.querySelectorAll("#dpc-timeline .rt-frame").forEach((el,idx)=>el.classList.toggle("active",idx===window.dpcIdx));
+}
+
+function dpcPrev(){window.dpcPlaying=false;clearInterval(window.dpcTimer);const btn=document.getElementById("btn-dpc-play");if(btn){btn.textContent="▶";btn.classList.remove("playing");}showDPCFrame(window.dpcIdx-1);}
+function dpcNext(){window.dpcPlaying=false;clearInterval(window.dpcTimer);const btn=document.getElementById("btn-dpc-play");if(btn){btn.textContent="▶";btn.classList.remove("playing");}showDPCFrame(window.dpcIdx+1);}
+function dpcTogglePlay(){
+  if(window.dpcPlaying){window.dpcPlaying=false;clearInterval(window.dpcTimer);const btn=document.getElementById("btn-dpc-play");if(btn){btn.textContent="▶";btn.classList.remove("playing");}return;}
+  window.dpcPlaying=true;
+  const btn=document.getElementById("btn-dpc-play");if(btn){btn.textContent="⏸";btn.classList.add("playing");}
+  window.dpcTimer=setInterval(()=>{
+    const next=(window.dpcIdx+1)%window.dpcFrames.length;
+    showDPCFrame(next);
+    if(next===window.dpcFrames.length-1){window.dpcPlaying=false;clearInterval(window.dpcTimer);const b=document.getElementById("btn-dpc-play");if(b){b.textContent="▶";b.classList.remove("playing");}}
+  },800);
+}
 
 async function initRainviewer(){
   if(!window.L){
@@ -442,10 +558,10 @@ async function initRainviewer(){
   }
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
   if(!radarMap){
-    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:6}).setView([lat,lon],6);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:6}).addTo(radarMap);
+    radarMap=L.map("radar-map",{zoomControl:true,attributionControl:false,maxZoom:7}).setView([lat,lon],7);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(radarMap);
   } else {
-    radarMap.setView([lat,lon],6);
+    radarMap.setView([lat,lon],7);
   }
   await loadRadarFrames();
 }
@@ -462,7 +578,7 @@ async function loadRadarFrames(){
     radarLayers.forEach(l=>{try{radarMap.removeLayer(l);}catch(e){}});
     radarLayers=[];
     radarFrames.forEach(f=>{
-      const layer=L.tileLayer(f.host+f.path+"/256/{z}/{x}/{y}/2/1_1.png",{opacity:0,zIndex:10,maxZoom:6});
+      const layer=L.tileLayer(f.host+f.path+"/512/{z}/{x}/{y}/4/1_1.png",{opacity:0,zIndex:10,maxZoom:7,tileSize:512,zoomOffset:-1});
       radarLayers.push(layer);
       layer.addTo(radarMap);
     });
@@ -596,14 +712,6 @@ async function geocode(q){
 async function go(){
   const v=_inp.value.trim(); if(!v)return;
   loader("Ricerca localit\u00e0...");
-  // Test connessione geocoding
-  try{
-    const test=await fetch("https://geocoding-api.open-meteo.com/v1/search?name=Roma&count=1&format=json");
-    if(!test.ok) throw new Error("HTTP "+test.status);
-  }catch(e){
-    showErr("Errore connessione geocoding: "+e.message+"<br><small>Prova ad aprire il file tramite un server locale o da GitHub Pages.</small>");
-    return;
-  }
   const res=await geocode(v);
   if(!res.length){showErr(`Località "<b>${escH(v)}</b>" non trovata. Prova con un nome più preciso.`);return;}
   const p=res[0];
