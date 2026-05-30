@@ -126,12 +126,6 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .rl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .dpc-wrap{display:none}
-.btn3b{display:flex;align-items:center;justify-content:center;gap:.6rem;
-  margin:1.2rem;background:rgba(40,200,100,.1);border:2px solid rgba(40,200,100,.4);
-  border-radius:12px;padding:1rem 1.5rem;color:#4ade80;font-size:.95rem;font-weight:700;
-  text-decoration:none;transition:.2s}
-.btn3b:hover{background:rgba(40,200,100,.18)}
-.hint3b{font-size:.78rem;color:var(--t3);text-align:center;margin:-0.5rem 1.2rem 1rem;line-height:1.5}
 
 /* Card */
 .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
@@ -165,7 +159,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .hdesc{font-size:.95rem;color:var(--t2);font-style:italic}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:.45rem}
 .di{background:rgba(0,0,0,.2);border-radius:10px;padding:.65rem .8rem}
-.dl{font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin-bottom:.22rem}
+.dl{font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:#b0b0b0;margin-bottom:.22rem}
 .dv{font-size:.95rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle;margin-right:3px}
 
@@ -183,7 +177,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .hwind{font-size:.65rem;color:var(--t2);margin-top:.12rem;line-height:1.3}
 .hrain{font-size:.65rem;color:var(--rain);margin-top:.1rem;font-weight:600}
 .hprob{font-size:.62rem;color:var(--t3)}
-.hfoot{font-size:.7rem;color:var(--t3);margin-top:.5rem;line-height:1.5}
+.hfoot{font-size:.7rem;color:#c0c0c0;margin-top:.5rem;line-height:1.5}
 
 /* 7 Giorni */
 .fcrow{display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.3rem}
@@ -272,7 +266,6 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       <div class="rdr-tabs">
         <button class="rtab act" id="rtab-rv" onclick="switchRadar('rv')">Rainviewer</button>
         <button class="rtab" id="rtab-dpc" onclick="switchRadar('dpc')">Prot. Civile</button>
-        <button class="rtab star" id="rtab-3b" onclick="open3b()">3bMeteo ★</button>
       </div>
       <button class="rdr-close" onclick="toggleRadar()">✕</button>
     </div>
@@ -304,20 +297,14 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       </div>
       <div class="rdr-leg"><span>🇮🇹 Protezione Civile · SRI · Solo passato · 5 min</span></div>
     </div>
-    <!-- 3bMeteo -->
-    <div class="dpc-wrap" id="b3-wrap">
-      <a class="btn3b" href="https://www.3bmeteo.com/radar/italia" target="_blank">
-        🌧️ Apri Radar 3bMeteo con Nowcast
-      </a>
-      <p class="hint3b">Si apre in nuova scheda · Nowcast 30 min · Cerca la tua località in alto a sinistra</p>
-    </div>
+
   </div>
 
   <!-- Preferito toggle -->
   <div id="fav-wrap"></div>
 
   <!-- Hint riordino -->
-  <div id="order-hint" class="hfoot" style="display:none;text-align:center;margin-bottom:.5rem;opacity:.6">
+  <div id="order-hint" class="hfoot" style="display:none;text-align:center;margin-bottom:.5rem;color:#d0d0d0">
     Usa ↑↓ nelle sezioni per riordinarle · L'ordine viene salvato
   </div>
 
@@ -642,7 +629,7 @@ function renderCurrentBody(cur,d){
     <div class="di"><div class="dl">🌧️ Precip.</div><div class="dv"><span class="dot" style="background:${pCol(d.precipitation_sum[0])}"></span>${d.precipitation_sum[0]>0?parseFloat(d.precipitation_sum[0]).toFixed(1)+"mm":"Assenti"}</div></div>
     <div class="di"><div class="dl">☀️ UV max</div><div class="dv">${d.uv_index_max[0]} — ${uvL(d.uv_index_max[0])}</div></div>
     <div class="di"><div class="dl">👁️ Visibilità</div><div class="dv">${vis}</div></div>
-    <div class="di"><div class="dl">🌅 Alba/Tramonto</div><div class="dv" style="font-size:.82rem">${fmtT(d.sunrise[0])} / ${fmtT(d.sunset[0])}</div></div>
+    <div class="di"><div class="dl">🌅 Alba/Tramonto</div><div class="dv" style="font-size:.82rem;color:#e8e8e8">${fmtT(d.sunrise[0])} / ${fmtT(d.sunset[0])}</div></div>
   </div>`;
 }
 
@@ -656,15 +643,24 @@ function renderModelsBody(i){
   };
   const maxs=[tm.e.max,tm.i.max,tm.g.max].filter(x=>!isNaN(x)&&x!==undefined);
   const diff=maxs.length>1?Math.max(...maxs)-Math.min(...maxs):0;
-  const conv=diff<=2?
-    `<div class="conv ok">✅ I tre modelli concordano (±${diff}°C) — Alta affidabilità.</div>`:
-    `<div class="conv warn">⚠️ I modelli divergono di ${diff}°C — Range: ${Math.min(...maxs)}–${Math.max(...maxs)}°C.</div>`;
+  // Convergenza temperatura
+  const convT=diff<=2?"✅ Temperatura concordante":"⚠️ Temperatura divergente ("+diff+"°C)";
+  // Convergenza pioggia — più importante per lavoro outdoor
+  const mms=[parseFloat(tm.e.mm),parseFloat(tm.i.mm),parseFloat(tm.g.mm)].filter(x=>!isNaN(x));
+  const mmDiff=mms.length>1?Math.max(...mms)-Math.min(...mms):0;
+  const mmAvg=mms.length?mms.reduce((a,b)=>a+b,0)/mms.length:0;
+  let rainConv,rainClass;
+  if(mmDiff<1){rainConv="✅ Pioggia concordante — tutti i modelli sono d'accordo";rainClass="ok";}
+  else if(mmDiff<5){rainConv="⚠️ Pioggia incerta — range "+Math.min(...mms).toFixed(1)+"–"+Math.max(...mms).toFixed(1)+"mm tra i modelli";rainClass="warn";}
+  else{rainConv="⛔ Forte disaccordo sulla pioggia — range "+Math.min(...mms).toFixed(1)+"–"+Math.max(...mms).toFixed(1)+"mm. Alta incertezza";rainClass="warn";}
   return `<div style="font-size:.72rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${fmtDay(wxData.main.daily.time[i],i)}</div>
   <div class="mgrid">
-    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wi(tm.e.wmo)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc">${wl(tm.e.wmo)} · ${tm.e.mm}mm</div></div>
-    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wi(tm.i.wmo)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc">${wl(tm.i.wmo)} · ${tm.i.mm}mm</div></div>
-    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wi(tm.g.wmo)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc">${wl(tm.g.wmo)} · ${tm.g.mm}mm</div></div>
-  </div>${conv}`;
+    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wi(tm.e.wmo)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wi(tm.i.wmo)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wi(tm.g.wmo)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
+  </div>
+  <div class="conv ${rainClass}" style="margin-top:.5rem">${rainConv}</div>
+  <div class="conv" style="margin-top:.4rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}${diff>0?" ("+Math.min(...maxs)+"–"+Math.max(...maxs)+"°C)":""}</div>`;
 }
 
 function renderHourlyInner(){
@@ -789,19 +785,17 @@ function refreshRadarPos(){
 
 function switchRadar(mode){
   curRadarMode=mode;
-  ["rv","dpc","3b"].forEach(m=>{
+  ["rv","dpc"].forEach(m=>{
     const t=document.getElementById("rtab-"+m);
     if(t) t.classList.toggle("act",m===mode);
   });
   document.getElementById("rv-wrap").style.display=mode==="rv"?"block":"none";
   document.getElementById("dpc-wrap").style.display=mode==="dpc"?"block":"none";
-  document.getElementById("b3-wrap").style.display=mode==="3b"?"block":"none";
   stopR();stopD();
   if(mode==="rv")initRV();
   else if(mode==="dpc")initDPC();
 }
 
-function open3b(){window.open("https://www.3bmeteo.com/radar/italia","_blank");}
 
 async function initRV(){
   const lat=CUR?.lat||41.9,lon=CUR?.lon||12.5;
