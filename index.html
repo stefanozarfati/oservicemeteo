@@ -451,20 +451,8 @@ async function initDPC(){
 }
 
 async function loadDPCFrames(){
-  try{
-    // Usa REST API DPC per trovare gli ultimi frame SRI (30 min = 6 frame x 5min)
-    const resp = await fetch("https://radar-api.protezionecivile.it/wide/radar/CAPPI/SRI/last/6");
-    const data = await resp.json();
-    const frames = Array.isArray(data) ? data : (data.products||data.items||[]);
-    if(!frames.length){ loadDPCFramesFallback(); return; }
-    window.dpcFrames = frames.map(f=>({
-      time: new Date(f.datetime||f.time||f.timestamp).getTime()/1000,
-      url: f.url||f.link
-    })).sort((a,b)=>a.time-b.time);
-    renderDPCLayers();
-  }catch(e){
-    loadDPCFramesFallback();
-  }
+  // Usa direttamente WMS con ultimi 30 min (6 frame x 5min)
+  loadDPCFramesFallback();
 }
 
 async function loadDPCFramesFallback(){
@@ -711,6 +699,9 @@ async function geocode(q){
 
 async function go(){
   const v=_inp.value.trim(); if(!v)return;
+  // Chiudi radar se aperto
+  const rp=document.getElementById("radar-panel");
+  if(rp&&rp.classList.contains("open")) closeRadar();
   loader("Ricerca localit\u00e0...");
   const res=await geocode(v);
   if(!res.length){showErr(`Località "<b>${escH(v)}</b>" non trovata. Prova con un nome più preciso.`);return;}
