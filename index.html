@@ -315,7 +315,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       Caricamento radar 3bMeteo...
     </div>
     <iframe id="radar-frame-3b" src="" style="width:100%;height:520px;border:none;display:none"
-      onload="on3bLoad()" onerror="on3bError()"></iframe>
+      onload="setTimeout(on3bLoad,50)" onerror="setTimeout(on3bError,50)"></iframe>
     <div id="radar-3b-blocked" style="display:none;padding:1.5rem;text-align:center">
       <div style="font-size:.88rem;color:var(--t2);margin-bottom:1rem;line-height:1.6">
         3bMeteo non consente l'integrazione diretta per motivi di sicurezza.<br>
@@ -1037,6 +1037,7 @@ if("serviceWorker" in navigator){
           // 2. Nominatim (trova frazioni, monti, parchi, quartieri)
           if(items.length<4){
             try{
+              const vNorm=v.replace(/[''`]/g,"'").replace(/'/g,"%27");
               const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=5&accept-language=it&addressdetails=1&namedetails=1`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
               const d2=await r2.json();
               d2.filter(x=>!["highway","road","path","footway","bus_stop","bus_station","neighbourhood","suburb"].includes(x.type)
