@@ -643,24 +643,43 @@ function renderModelsBody(i){
   };
   const maxs=[tm.e.max,tm.i.max,tm.g.max].filter(x=>!isNaN(x)&&x!==undefined);
   const diff=maxs.length>1?Math.max(...maxs)-Math.min(...maxs):0;
-  // Convergenza temperatura
-  const convT=diff<=2?"✅ Temperatura concordante":"⚠️ Temperatura divergente ("+diff+"°C)";
-  // Convergenza pioggia — più importante per lavoro outdoor
+  // Probabilità pioggia dal modello principale (best_match)
+  const prob=wxData.main.daily.precipitation_probability_max?.[i]||0;
+  const probLabel=prob<=10?"Molto bassa":prob<=30?"Bassa":prob<=60?"Moderata":prob<=80?"Alta":"Molto alta";
+  const probColor=prob<=10?"#2ab84a":prob<=30?"#8ab84a":prob<=60?"#f09020":prob<=80?"#e05020":"#b02020";
+
+  // Convergenza quantità mm tra modelli
   const mms=[parseFloat(tm.e.mm),parseFloat(tm.i.mm),parseFloat(tm.g.mm)].filter(x=>!isNaN(x));
   const mmDiff=mms.length>1?Math.max(...mms)-Math.min(...mms):0;
-  const mmAvg=mms.length?mms.reduce((a,b)=>a+b,0)/mms.length:0;
-  let rainConv,rainClass;
-  if(mmDiff<1){rainConv="✅ Pioggia concordante — tutti i modelli sono d'accordo";rainClass="ok";}
-  else if(mmDiff<5){rainConv="⚠️ Pioggia incerta — range "+Math.min(...mms).toFixed(1)+"–"+Math.max(...mms).toFixed(1)+"mm tra i modelli";rainClass="warn";}
-  else{rainConv="⛔ Forte disaccordo sulla pioggia — range "+Math.min(...mms).toFixed(1)+"–"+Math.max(...mms).toFixed(1)+"mm. Alta incertezza";rainClass="warn";}
+  const mmMin=Math.min(...mms).toFixed(1), mmMax=Math.max(...mms).toFixed(1);
+  let mmConv,mmClass;
+  if(mmDiff<1){
+    mmConv=mms[0]<0.2?"✅ Tutti i modelli stimano assenza di precipitazioni":"✅ I modelli concordano sulla quantità stimata ("+mmMin+"–"+mmMax+"mm)";
+    mmClass="ok";
+  } else if(mmDiff<5){
+    mmConv="⚠️ I modelli stimano quantità diverse: da "+mmMin+" a "+mmMax+"mm — incertezza moderata";
+    mmClass="warn";
+  } else {
+    mmConv="⛔ I modelli divergono molto: da "+mmMin+" a "+mmMax+"mm — previsione inaffidabile";
+    mmClass="warn";
+  }
+
+  // Convergenza temperatura
+  const convT=diff<=2?"✅ Temperatura concordante (±"+diff+"°C)":"⚠️ Temperatura divergente: "+Math.min(...maxs)+"–"+Math.max(...maxs)+"°C";
+
   return `<div style="font-size:.72rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${fmtDay(wxData.main.daily.time[i],i)}</div>
   <div class="mgrid">
     <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wi(tm.e.wmo)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
     <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wi(tm.i.wmo)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
     <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wi(tm.g.wmo)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
   </div>
-  <div class="conv ${rainClass}" style="margin-top:.5rem">${rainConv}</div>
-  <div class="conv" style="margin-top:.4rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}${diff>0?" ("+Math.min(...maxs)+"–"+Math.max(...maxs)+"°C)":""}</div>`;
+  <div style="margin-top:.6rem;padding:.65rem .9rem;border-radius:9px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08)">
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:#b0b0b0;margin-bottom:.3rem">Probabilità di pioggia</div>
+    <div style="font-size:1.3rem;font-weight:800;color:${probColor}">${prob}%</div>
+    <div style="font-size:.78rem;color:${probColor};margin-top:.1rem">${probLabel}</div>
+  </div>
+  <div class="conv ${mmClass}" style="margin-top:.4rem">${mmConv}</div>
+  <div class="conv" style="margin-top:.4rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}</div>`;
 }
 
 function renderHourlyInner(){
