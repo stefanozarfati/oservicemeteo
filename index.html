@@ -668,18 +668,18 @@ function renderModelsBody(i){
   const convT=diff<=2?"✅ Temperatura concordante (±"+diff+"°C)":"⚠️ Temperatura divergente: "+Math.min(...maxs)+"–"+Math.max(...maxs)+"°C";
 
   return `<div style="font-size:.72rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${fmtDay(wxData.main.daily.time[i],i)}</div>
-  <div class="mgrid">
-    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wi(tm.e.wmo)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wi(tm.i.wmo)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wi(tm.g.wmo)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
-  </div>
-  <div style="margin-top:.6rem;padding:.65rem .9rem;border-radius:9px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08)">
+  <div style="padding:.65rem .9rem;border-radius:9px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);margin-bottom:.4rem">
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:#b0b0b0;margin-bottom:.3rem">Probabilità di pioggia</div>
     <div style="font-size:1.3rem;font-weight:800;color:${probColor}">${prob}%</div>
     <div style="font-size:.78rem;color:${probColor};margin-top:.1rem">${probLabel}</div>
   </div>
-  <div class="conv ${mmClass}" style="margin-top:.4rem">${mmConv}</div>
-  <div class="conv" style="margin-top:.4rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}</div>`;
+  <div class="conv ${mmClass}" style="margin-bottom:.4rem">${mmConv}</div>
+  <div class="conv" style="margin-bottom:.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}</div>
+  <div class="mgrid">
+    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wi(tm.e.wmo)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wi(tm.i.wmo)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wi(tm.g.wmo)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
+  </div>`;
 }
 
 function renderHourlyInner(){
