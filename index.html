@@ -474,10 +474,10 @@ function renderAstro(d){
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
       <!-- Arco del sole -->
       <path d="M ${cx+rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx-rx} ${cy}"
-        fill="none" stroke="rgba(255,255,255,.18)" stroke-width="5" stroke-linecap="round"/>
+        fill="none" stroke="rgba(240,112,32,.55)" stroke-width="5" stroke-linecap="round"/>
       <!-- Parte percorsa -->
       ${isDay?`<path d="M ${cx+rx} ${cy} A ${rx} ${ry} 0 0 0 ${sx} ${sy}"
-        fill="none" stroke="url(#sunGrad)" stroke-width="5.5" stroke-linecap="round"/>
+        fill="none" stroke="rgba(255,255,255,.2)" stroke-width="5.5" stroke-linecap="round"/>
       <!-- Sole attuale -->
       <circle cx="${sx}" cy="${sy}" r="10" fill="#F07020" opacity=".25"/>
       <circle cx="${sx}" cy="${sy}" r="6" fill="#FF8C30"/>
