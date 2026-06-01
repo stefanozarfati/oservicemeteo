@@ -41,7 +41,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 /* Search */
 .srow{position:relative;margin-bottom:.6rem}
 .sinp{width:100%;background:rgba(255,255,255,.08);border:2px solid var(--bd);
-  border-radius:13px;padding:.95rem 3.5rem .95rem 1.2rem;color:var(--t);
+  border-radius:13px;padding:.95rem 6.5rem .95rem 1.2rem;color:var(--t);
   font-size:1rem;font-family:'Raleway',sans-serif;outline:none;transition:.2s}
 .sinp:focus{border-color:var(--o);box-shadow:0 0 0 3px rgba(240,112,32,.15)}
 .sinp::placeholder{color:var(--t3)}
@@ -226,6 +226,20 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .ibtn{background:var(--o);border:none;border-radius:8px;padding:.45rem .85rem;
   color:#fff;font-size:.85rem;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
 .iclose{background:none;border:none;color:var(--t2);font-size:1.1rem;cursor:pointer}
+
+.gps-btn{position:absolute;right:3.5rem;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;font-size:1.1rem;padding:.3rem;
+  color:var(--t2);transition:.2s;border-radius:6px}
+.gps-btn:hover{color:var(--o);background:rgba(240,112,32,.1)}
+.gps-btn.loading{animation:spin .8s linear infinite;color:var(--o)}
+
+.sun-arc-wrap{position:relative;width:100%;max-width:380px;margin:0 auto}
+.sun-arc-wrap svg{width:100%;height:auto;display:block}
+.sun-info{display:flex;justify-content:space-between;margin-top:.3rem;font-size:.78rem;color:#c0c0c0}
+.sun-dir{text-align:center;margin-top:.6rem}
+.sun-deg{font-size:2rem;font-weight:800;color:var(--o);line-height:1}
+.sun-cardinal{font-size:.95rem;color:var(--t2);margin-top:.2rem}
+.sun-note{font-size:.72rem;color:var(--t3);margin-top:.3rem;line-height:1.4}
 </style>
 </head>
 <body>
@@ -246,6 +260,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     <input class="sinp" id="inp" placeholder="Città, monte, valle, frazione..."
       autocomplete="off" autocorrect="off" spellcheck="false"
       onkeydown="if(event.key==='Enter'){document.getElementById('sug').classList.remove('open');go();}">
+    <button class="gps-btn" id="gps-btn" onclick="useGPS()" title="Usa posizione attuale">📍</button>
     <button class="sbtn" onclick="document.getElementById('sug').classList.remove('open');go()">🔍</button>
   </div>
   <div class="sug" id="sug"></div>
@@ -326,7 +341,160 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <button class="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+// ═══════════════════════════════════════════════════════
+//  GPS
+// ═══════════════════════════════════════════════════════
+function useGPS(){
+  const btn=document.getElementById("gps-btn");
+  if(!navigator.geolocation){alert("GPS non disponibile su questo dispositivo.");return;}
+  btn.classList.add("loading");
+  btn.textContent="⌛";
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude, lon=pos.coords.longitude;
+    btn.classList.remove("loading");
+    btn.textContent="📍";
+    // Geocoding inverso con Nominatim
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
+      const d=await r.json();
+      const addr=d.address||{};
+      const name=addr.village||addr.town||addr.suburb||addr.city||addr.county||"Posizione attuale";
+      const region=[addr.city||addr.town,addr.county||addr.state_district,addr.state].filter(Boolean).filter(x=>x!==name).join(", ");
+      document.getElementById("inp").value=name+(region?", "+region:"");
+      fetchWeather(lat,lon,name,region);
+    }catch(e){
+      // Usa coordinate dirette se il geocoding fallisce
+      fetchWeather(lat,lon,"Posizione attuale ("+lat.toFixed(3)+"°, "+lon.toFixed(3)+"°)","");
+    }
+  }, err=>{
+    btn.classList.remove("loading");
+    btn.textContent="📍";
+    if(err.code===1) alert("Accesso alla posizione negato. Abilita il GPS nelle impostazioni.");
+    else alert("Impossibile ottenere la posizione.");
+  },{timeout:10000,maximumAge:60000});
+}
+
+// ═══════════════════════════════════════════════════════
+//  ASTRONOMIA — calcolo posizione solare
+// ═══════════════════════════════════════════════════════
+function calcSunPosition(lat, lon, date){
+  // Algoritmo NOAA semplificato
+  const rad=Math.PI/180, deg=180/Math.PI;
+  const JD=(date.getTime()/86400000)+2440587.5;
+  const T=(JD-2451545.0)/36525;
+  // Longitudine media del sole
+  const L0=(280.46646+T*(36000.76983+T*0.0003032))%360;
+  // Anomalia media
+  const M=(357.52911+T*(35999.05029-T*0.0001537))*rad;
+  // Equazione del centro
+  const C=(1.914602-T*(0.004817+0.000014*T))*Math.sin(M)+(0.019993-0.000101*T)*Math.sin(2*M)+0.000289*Math.sin(3*M);
+  // Longitudine eclittica
+  const sunLon=(L0+C)*rad;
+  // Obliquità eclittica
+  const e=(23.439291111-T*(0.013004167+T*(0.0000001639-T*0.0000005036)))*rad;
+  // Declinazione
+  const decl=Math.asin(Math.sin(e)*Math.sin(sunLon));
+  // Equazione del tempo (minuti)
+  const y=Math.tan(e/2)**2;
+  const LL=L0*rad, MM=M;
+  const eot=4*deg*(y*Math.sin(2*LL)-2*0.016708634*Math.sin(MM)+4*0.016708634*y*Math.sin(MM)*Math.cos(2*LL)-0.5*y*y*Math.sin(4*LL)-1.25*0.016708634**2*Math.sin(2*MM));
+  // Ora solare vera
+  const tzOffset=date.getTimezoneOffset();
+  const solarNoonMin=720-lon*4-eot+tzOffset; // minuti dalla mezzanotte
+  const minutesNow=date.getHours()*60+date.getMinutes()+date.getSeconds()/60;
+  const hourAngle=(minutesNow-solarNoonMin)*0.25*rad; // 0.25 = 360/1440
+  // Elevazione
+  const latRad=lat*rad;
+  const sinAlt=Math.sin(latRad)*Math.sin(decl)+Math.cos(latRad)*Math.cos(decl)*Math.cos(hourAngle);
+  const elevation=Math.asin(sinAlt)*deg;
+  // Azimut (Nord=0, Est=90, Sud=180, Ovest=270)
+  const cosAz=(-Math.sin(latRad)*sinAlt+Math.sin(decl))/(Math.cos(latRad)*Math.cos(Math.asin(sinAlt)));
+  let azimuth=Math.acos(Math.max(-1,Math.min(1,cosAz)))*deg;
+  if(hourAngle>0) azimuth=360-azimuth; // pomeriggio
+  return {elevation, azimuth, decl:decl*deg};
+}
+
+function azimuthToCardinal(az){
+  const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
+  const idx=Math.round(az/22.5)%16;
+  return dirs[idx];
+}
+
+function renderAstro(d){
+  if(!CUR||!wxData) return "";
+  const now=new Date();
+  const sun=calcSunPosition(CUR.lat,CUR.lon,now);
+  const sr=d.sunrise[0]?new Date(d.sunrise[0]):null;
+  const ss=d.sunset[0]?new Date(d.sunset[0]):null;
+  if(!sr||!ss) return "";
+
+  const srMin=sr.getHours()*60+sr.getMinutes();
+  const ssMin=ss.getHours()*60+ss.getMinutes();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const dayLen=ssMin-srMin;
+  
+  // Progresso arco (0=alba, 1=tramonto)
+  const prog=Math.max(0,Math.min(1,(nowMin-srMin)/dayLen));
+  const isDay=nowMin>=srMin&&nowMin<=ssMin;
+  
+  // Calcola ore di luce
+  const hLight=Math.floor(dayLen/60), mLight=dayLen%60;
+
+  // Posizione sole sull'arco SVG
+  // Arco: semicerchio da sinistra (alba/Est) a destra (tramonto/Ovest), con picco in alto (Sud)
+  const W=320, H=180, cx=W/2, cy=H-10, rx=cx-20, ry=H-30;
+  const angle=Math.PI*(1-prog); // π=alba(sx), 0=tramonto(dx)
+  const sx=cx-rx*Math.cos(angle);
+  const sy=cy-ry*Math.sin(angle);
+
+  const cardinal=azimuthToCardinal(sun.azimuth);
+  const az=Math.round(sun.azimuth);
+
+  const sunEmoji=isDay?(sun.elevation>30?"☀️":sun.elevation>10?"🌤️":"🌅"):"🌙";
+
+  return `
+  <div class="sun-arc-wrap">
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <!-- Arco del sole -->
+      <path d="M ${cx-rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx+rx} ${cy}"
+        fill="none" stroke="rgba(255,255,255,.15)" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Parte percorsa -->
+      ${isDay?`<path d="M ${cx-rx} ${cy} A ${rx} ${ry} 0 0 1 ${sx} ${sy}"
+        fill="none" stroke="url(#sunGrad)" stroke-width="3" stroke-linecap="round"/>
+      <!-- Sole attuale -->
+      <circle cx="${sx}" cy="${sy}" r="10" fill="#F07020" opacity=".25"/>
+      <circle cx="${sx}" cy="${sy}" r="6" fill="#FF8C30"/>
+      <text x="${sx}" y="${sy+1}" text-anchor="middle" dominant-baseline="middle" font-size="10">☀</text>`:''}
+      <!-- Etichette -->
+      <text x="${cx-rx-2}" y="${cy+14}" text-anchor="middle" font-size="11" fill="#aaa">E</text>
+      <text x="${cx}" y="${cy-ry-8}" text-anchor="middle" font-size="11" fill="#aaa">S</text>
+      <text x="${cx+rx+2}" y="${cy+14}" text-anchor="middle" font-size="11" fill="#aaa">O</text>
+      <!-- Linea orizzonte -->
+      <line x1="${cx-rx-15}" y1="${cy}" x2="${cx+rx+15}" y2="${cy}" stroke="rgba(255,255,255,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+      <defs>
+        <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#F07020;stop-opacity:.6"/>
+          <stop offset="100%" style="stop-color:#FF8C30;stop-opacity:1"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="sun-info">
+      <span>🌅 ${fmtT(d.sunrise[0])}<br><small style="color:var(--t3)">Alba</small></span>
+      <span style="text-align:center">${sunEmoji}<br><small style="color:var(--t3)">${hLight}h ${mLight}m di luce</small></span>
+      <span style="text-align:right">🌇 ${fmtT(d.sunset[0])}<br><small style="color:var(--t3)">Tramonto</small></span>
+    </div>
+  </div>
+  ${isDay?`
+  <div class="sun-dir">
+    <div class="sun-deg">${az}°</div>
+    <div class="sun-cardinal">${cardinal}</div>
+    <div class="sun-note">Guardando il sole ora sei rivolto verso <strong style="color:var(--o2)">${cardinal}</strong><br>
+    Elevazione: ${Math.round(sun.elevation)}° sull'orizzonte</div>
+  </div>`:`<div style="text-align:center;color:var(--t3);font-size:.85rem;padding:.8rem">🌙 Il sole è sotto l'orizzonte</div>`}`;
+}
+
+</script>
 <script>
 // ═══════════════════════════════════════════════════════
 //  COSTANTI WMO
@@ -583,7 +751,8 @@ function render(){
     {id:"sec-7days",label:"Previsioni 7 giorni · Tocca per le ore",body:`<div class="fcrow">${fcHtml}</div>`},
     {id:"sec-current",label:"Condizioni attuali",tag:'<span class="tag tag-om">LIVE</span>',body:renderCurrentBody(cur,d)},
     {id:"sec-models",label:"Confronto modelli",body:renderModelsBody(selDay)},
-    {id:"sec-advice",label:"🧭 Consiglio outdoor",body:`<div class="cons">${outdoorAdvice(cur,d)}</div>`}
+    {id:"sec-advice",label:"🧭 Consiglio outdoor",body:`<div class="cons">${outdoorAdvice(cur,d)}</div>`},
+    {id:"sec-astro",label:"☀️ Astronomia",body:renderAstro(d)}
   ];
   // Ripristina ordine salvato
   const saved=JSON.parse(localStorage.getItem(ORD_KEY)||"null");
