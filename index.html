@@ -152,7 +152,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
 /* Hero condizioni */
 .hero{display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.9rem}
-.hico{font-size:4rem;line-height:1;flex-shrink:0;filter:drop-shadow(0 3px 10px rgba(0,0,0,.5))}
+.hico{font-size:1rem;line-height:1;flex-shrink:0}
 .hloc{font-family:"Playfair Display",serif;font-size:1.5rem;color:var(--o);line-height:1.2}
 .hreg{font-size:.8rem;color:var(--t2);margin:.2rem 0 .3rem}
 .htemp{font-size:3rem;font-weight:800;line-height:1;letter-spacing:-2px}
@@ -173,7 +173,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   padding:.6rem .35rem;text-align:center;border:1px solid rgba(255,255,255,.08)}
 .hcol.now{background:rgba(240,112,32,.18);border:2.5px solid var(--o)}
 .htime{font-size:1.1rem;font-weight:800;color:var(--o);margin-bottom:.25rem;letter-spacing:.5px}
-.hico2{font-size:1.5rem;margin-bottom:.2rem}
+.hico2{font-size:1rem;margin-bottom:.2rem;line-height:1}
 .htemp2{font-size:.9rem;font-weight:700}
 .hwind{font-size:.65rem;color:var(--t2);margin-top:.12rem;line-height:1.3}
 .hrain{font-size:.65rem;color:var(--rain);margin-top:.1rem;font-weight:600}
@@ -189,7 +189,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .fcd:hover,.fcd.act{background:rgba(240,112,32,.14);border:2px solid var(--o)}
 .fcd.t0{background:rgba(240,112,32,.1);border:2px solid rgba(240,112,32,.4)}
 .fcn{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--t2);margin-bottom:.3rem}
-.fci{font-size:1.7rem;margin-bottom:.2rem}
+.fci{font-size:1rem;margin-bottom:.2rem;line-height:1}
 .fct{font-size:.88rem;font-weight:700}
 .fcp{font-size:.67rem;color:var(--t2);margin-top:.2rem;line-height:1.3}
 
@@ -524,6 +524,26 @@ const WI={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51
   85:"🌨️",86:"❄️",95:"⛈️",96:"⛈️",99:"⛈️"};
 function wl(c){return WL[c]||"Variabile";}
 function wi(c){return WI[c]||"🌤️";}
+
+// Icone meteo illustrate (OpenWeatherMap icon set)
+const WMO_OWM={
+  0:"01",1:"01",2:"02",3:"04",
+  45:"50",48:"50",
+  51:"09",53:"09",55:"09",56:"09",57:"09",
+  61:"10",63:"10",65:"10",66:"13",67:"13",
+  71:"13",73:"13",75:"13",77:"13",
+  80:"09",81:"09",82:"09",85:"13",86:"13",
+  95:"11",96:"11",99:"11"
+};
+function wiUrl(code, isDay){
+  const owm=WMO_OWM[code]||"01";
+  const sfx=isDay===false?"n":"d";
+  return "https://openweathermap.org/img/wn/"+owm+sfx+"@2x.png";
+}
+function wiImg(code, isDay, size){
+  size=size||44;
+  return '<img src="'+wiUrl(code,isDay)+'" width="'+size+'" height="'+size+'" style="display:inline-block;vertical-align:middle;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))" loading="lazy" alt="'+wl(code)+'">';
+}
 function pCol(mm){if(!mm||mm<.2)return"#2ab84a";if(mm<3)return"#f09020";if(mm<12)return"#e05020";return"#b02020";}
 function wDir(d){return["N","NE","E","SE","S","SO","O","NO"][Math.round((d||0)/45)%8]||"—";}
 function fmtT(s){if(!s)return"--";const d=new Date(s);return d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});}
@@ -755,7 +775,7 @@ function render(){
     const mm=d.precipitation_sum[i];
     fcHtml+=`<div class="fcd${i===0?" t0":""}${i===selDay?" act":""}" onclick="changeDay(${i})">
       <div class="fcn">${fmtDay(d.time[i],i)}</div>
-      <div class="fci">${wi(d.weather_code[i])}</div>
+      <div class="fci">${wiImg(d.weather_code[i],true,40)}</div>
       <div class="fct">${Math.round(d.temperature_2m_min[i])}°/${Math.round(d.temperature_2m_max[i])}°</div>
       <div class="fcp"><span class="dot" style="background:${pCol(mm)}"></span>${mm>0?parseFloat(mm).toFixed(1)+"mm":"Asciutto"}${d.precipitation_probability_max[i]>0?" ("+d.precipitation_probability_max[i]+"%)" :""}</div>
     </div>`;
@@ -796,7 +816,7 @@ function render(){
 function renderCurrentBody(cur,d){
   const vis=cur.visibility!=null?(cur.visibility/1000).toFixed(0)+"km":"—";
   return `<div class="hero">
-    <div class="hico">${wi(cur.weather_code)}</div>
+    <div class="hico">${wiImg(cur.weather_code,cur.is_day!==0,72)}</div>
     <div style="flex:1;min-width:140px">
       <div class="hloc">${escH(CUR.name)}</div>
       <div class="hreg">${escH(CUR.region||"")}</div>
@@ -860,9 +880,9 @@ function renderModelsBody(i){
   <div class="conv ${mmClass}" style="margin-bottom:.4rem">${mmConv}</div>
   <div class="conv" style="margin-bottom:.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}</div>
   <div class="mgrid">
-    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wi(tm.e.wmo)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wi(tm.i.wmo)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wi(tm.g.wmo)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wiImg(tm.e.wmo,true,28)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wiImg(tm.i.wmo,true,28)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wiImg(tm.g.wmo,true,28)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
   </div>`;
 }
 
@@ -889,7 +909,7 @@ function renderHourlyInner(){
     const isNow=h.t.substring(0,13)===nowStr;
     return `<div class="hcol${isNow?" now":""}">
       <div class="htime">${String(h.hour).padStart(2,"0")}:00</div>
-      <div class="hico2">${(h.hour<srH||h.hour>=ssH)&&h.wmo===0?"🌙":wi(h.wmo)}</div>
+      <div class="hico2">${wiImg(h.wmo,!(h.hour<srH||h.hour>=ssH),36)}</div>
       <div class="htemp2">${Math.round(h.temp)}°</div>
       <div class="hwind">${wDir(h.dir)} ${Math.round(h.wind)}<br><span style="color:var(--t3)">↑${Math.round(h.gusts)}</span></div>
       ${h.precip>0?`<div class="hrain">${h.precip.toFixed(1)}mm</div>`:""}
