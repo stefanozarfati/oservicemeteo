@@ -347,32 +347,39 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 // ═══════════════════════════════════════════════════════
 function useGPS(){
   const btn=document.getElementById("gps-btn");
-  if(!navigator.geolocation){alert("GPS non disponibile su questo dispositivo.");return;}
-  btn.classList.add("loading");
+  if(!navigator.geolocation){
+    showErr("GPS non disponibile su questo browser. Usa Safari su iPhone.");
+    return;
+  }
+  btn.style.opacity="0.5";
   btn.textContent="⌛";
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    const lat=pos.coords.latitude, lon=pos.coords.longitude;
-    btn.classList.remove("loading");
-    btn.textContent="📍";
-    // Geocoding inverso con Nominatim
-    try{
-      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=it`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
-      const d=await r.json();
-      const addr=d.address||{};
-      const name=addr.village||addr.town||addr.suburb||addr.city||addr.county||"Posizione attuale";
-      const region=[addr.city||addr.town,addr.county||addr.state_district,addr.state].filter(Boolean).filter(x=>x!==name).join(", ");
-      document.getElementById("inp").value=name+(region?", "+region:"");
-      fetchWeather(lat,lon,name,region);
-    }catch(e){
-      // Usa coordinate dirette se il geocoding fallisce
-      fetchWeather(lat,lon,"Posizione attuale ("+lat.toFixed(3)+"°, "+lon.toFixed(3)+"°)","");
-    }
-  }, err=>{
-    btn.classList.remove("loading");
-    btn.textContent="📍";
-    if(err.code===1) alert("Accesso alla posizione negato. Abilita il GPS nelle impostazioni.");
-    else alert("Impossibile ottenere la posizione.");
-  },{timeout:10000,maximumAge:60000});
+  loader("📍 Rilevamento posizione GPS...");
+  navigator.geolocation.getCurrentPosition(
+    async function(pos){
+      const lat=pos.coords.latitude, lon=pos.coords.longitude;
+      btn.style.opacity="1";
+      btn.textContent="📍";
+      loader("🔍 Identificazione località...");
+      try{
+        const r=await fetch("https://nominatim.openstreetmap.org/reverse?lat="+lat+"&lon="+lon+"&format=json&accept-language=it",{headers:{"User-Agent":"OServiceMeteo/1.0"}});
+        const d=await r.json();
+        const addr=d.address||{};
+        const name=addr.village||addr.hamlet||addr.town||addr.suburb||addr.city||addr.county||"Posizione attuale";
+        const region=[addr.city||addr.town,addr.county||addr.state_district,addr.state].filter(Boolean).filter(function(x){return x!==name;}).join(", ");
+        document.getElementById("inp").value=name+(region?", "+region:"");
+        fetchWeather(lat,lon,name,region);
+      }catch(e){
+        fetchWeather(lat,lon,"Posizione GPS ("+lat.toFixed(3)+", "+lon.toFixed(3)+"°)","");
+      }
+    },
+    function(err){
+      btn.style.opacity="1";
+      btn.textContent="📍";
+      var msg={1:"Permesso GPS negato. Su iPhone: Impostazioni → Safari → Posizione → Consenti.",2:"Posizione non disponibile. Assicurati di avere il GPS attivo.",3:"Timeout GPS. Riprova all'aperto."};
+      showErr(msg[err.code]||"Errore GPS: "+err.message);
+    },
+    {timeout:15000, maximumAge:30000, enableHighAccuracy:true}
+  );
 }
 
 // ═══════════════════════════════════════════════════════
@@ -494,8 +501,7 @@ function renderAstro(d){
   </div>`:`<div style="text-align:center;color:var(--t3);font-size:.85rem;padding:.8rem">🌙 Il sole è sotto l'orizzonte</div>`}`;
 }
 
-</script>
-<script>
+
 // ═══════════════════════════════════════════════════════
 //  COSTANTI WMO
 // ═══════════════════════════════════════════════════════
