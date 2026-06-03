@@ -250,7 +250,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
 .top-bar{position:fixed;top:0;left:0;right:0;z-index:100;
   background:#3a1800;
-  padding:1rem 1rem 0;
+  padding:1rem 1rem 7px;
   margin:0;padding-left:1rem;padding-right:1rem;width:100%;box-sizing:border-box;
   box-shadow:0 6px 10px rgba(40,15,0,.5)}
 .top-bar .hdr h1{color:#FF8C30}
@@ -268,6 +268,8 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #radar-panel{padding-left:0;padding-right:0;margin:0 1rem}
 #fav-wrap{padding-top:.6rem}
 .content-wrap{padding-top:var(--hh,200px)}
+
+.top-bar .abar{margin-bottom:0}
 
 .top-bar .abar{margin-bottom:0}
 </style>
@@ -948,10 +950,11 @@ function renderModelsBody(i){
   <div class="conv ${mmClass}" style="margin-bottom:.4rem">${mmConv}</div>
   <div class="conv" style="margin-bottom:.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}</div>
   <div class="mgrid">
-    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wiImg(tm.e.wmo,true,28)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wiImg(tm.i.wmo,true,28)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wiImg(tm.g.wmo,true,28)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
-  </div>`;
+    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wiImg(tm.e.wmo,true,28)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wiImg(tm.i.wmo,true,28)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wiImg(tm.g.wmo,true,28)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
+  </div>
+  ${i===0&&todayRemainMm!==null?`<div style="font-size:.68rem;color:#7a3010;margin-top:.3rem;text-align:center;font-style:italic">🌧️ Precipitazioni best_match${todayRemainNote}</div>`:''}`;
 }
 
 function renderHourlyInner(){
