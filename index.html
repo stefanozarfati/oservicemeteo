@@ -349,7 +349,20 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <button class="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+function renderAdviceBody(cur,d,dayIdx){
+  dayIdx=dayIdx||0;
+  var label=fmtDay(d.time[dayIdx],dayIdx);
+  var dateStr=dayIdx===0?"Oggi, "+label:label;
+  return '<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--o2);font-weight:700;margin-bottom:.6rem">'+dateStr+'</div>'+
+    '<div class="cons">'+outdoorAdvice(cur,d,dayIdx)+'</div>';
+}
+
+function outdoorAdviceByDay(cur,d,dayIdx){
+  return renderAdviceBody(cur,d,dayIdx);
+}
+
+</script>
 <script>
 // ═══════════════════════════════════════════════════════
 //  GPS
@@ -786,7 +799,7 @@ function render(){
     {id:"sec-7days",label:'<i class="fa-icon fa-solid fa-calendar-week"></i> Previsioni 7 giorni · Tocca per le ore',body:`<div class="fcrow">${fcHtml}</div>`},
     {id:"sec-current",label:'<i class="fa-icon fa-solid fa-cloud-sun"></i> Condizioni attuali',tag:'<span class="tag tag-om">LIVE</span>',body:renderCurrentBody(cur,d)},
     {id:"sec-models",label:'<i class="fa-icon fa-solid fa-sliders"></i> Confronto modelli',body:renderModelsBody(selDay)},
-    {id:"sec-advice",label:'<i class="fa-icon fa-solid fa-person-hiking"></i> Consiglio outdoor',body:`<div class="cons">${outdoorAdvice(cur,d)}</div>`},
+    {id:"sec-advice",label:'<i class="fa-icon fa-solid fa-person-hiking"></i> Consiglio outdoor',body:renderAdviceBody(cur,d,0)},
     {id:"sec-astro",label:'<i class="fa-icon fa-solid fa-sun"></i> Astronomia',body:renderAstro(d)}
   ];
   // Ripristina ordine salvato
@@ -811,6 +824,14 @@ function render(){
   document.getElementById("inp").value=CUR.name+(CUR.region?", "+CUR.region:"");
   // Scroll ai risultati
   setTimeout(()=>document.getElementById("content").scrollIntoView({behavior:"smooth",block:"start"}),100);
+  // Scroll all'ora corrente nelle previsioni orarie
+  setTimeout(()=>{
+    const hs=document.getElementById("hscroll-main");
+    if(hs){
+      const now=hs.querySelector(".now");
+      if(now) now.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
+    }
+  },400);
 }
 
 function renderCurrentBody(cur,d){
@@ -916,18 +937,17 @@ function renderHourlyInner(){
       ${h.prob>0?`<div class="hprob">${h.prob}%</div>`:""}
     </div>`;
   }).join("");
-  // Auto-scroll all'ora corrente (solo per oggi)
-  const scrollId='hscroll-'+Date.now();
-  const scrollJs=selDay===0?`setTimeout(()=>{const el=document.getElementById('${scrollId}');if(el){const now=el.querySelector('.now');if(now)now.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});}},120);`:'';
   return `<div style="font-size:.75rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${label}</div>
-    <div class="hscroll" id="${scrollId}"><div class="htable">${cols}</div></div>
-    <div class="hfoot">🌅 ${fmtT(d.sunrise[selDay])} · 🌇 ${fmtT(d.sunset[selDay])} · vento km/h · ↑raffiche</div>
-    <script>${scrollJs}</scr`+'ipt>';
+    <div class="hscroll" id="hscroll-main"><div class="htable">${cols}</div></div>
+    <div class="hfoot">🌅 ${fmtT(d.sunrise[selDay])} · 🌇 ${fmtT(d.sunset[selDay])} · vento km/h · ↑raffiche</div>`;
 }
 
-function outdoorAdvice(cur,d){
-  const p=d.precipitation_sum[0]||0,pp=d.precipitation_probability_max[0]||0;
-  const w=cur.wind_speed_10m||0,t=cur.temperature_2m||20,wmo=cur.weather_code;
+function outdoorAdvice(cur,d,dayIdx){
+  dayIdx=dayIdx||0;
+  const p=d.precipitation_sum[dayIdx]||0,pp=d.precipitation_probability_max[dayIdx]||0;
+  const w=dayIdx===0?(cur.wind_speed_10m||0):(d.wind_speed_10m_max?.[dayIdx]||0);
+  const t=dayIdx===0?(cur.temperature_2m||20):((d.temperature_2m_max[dayIdx]+d.temperature_2m_min[dayIdx])/2||20);
+  const wmo=dayIdx===0?cur.weather_code:d.weather_code[dayIdx];
   const pts=[];
   if(p>=15)pts.push("⛔ Piogge abbondanti — impermeabile e protezione attrezzature essenziali.");
   else if(p>=4)pts.push("🌧️ Precipitazioni moderate ("+p.toFixed(1)+"mm) — abbigliamento impermeabile consigliato.");
@@ -971,6 +991,11 @@ function changeDay(i){
     ac.insertAdjacentHTML("beforeend",renderAdviceBody(wxData.main.current,wxData.main.daily,i));
   }
   document.getElementById("sec-hours")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+  // Scroll all'ora corrente se oggi
+  if(i===0) setTimeout(()=>{
+    const hs=document.getElementById("hscroll-main");
+    if(hs){const now=hs.querySelector(".now");if(now)now.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});}
+  },200);
 }
 
 // ═══════════════════════════════════════════════════════
