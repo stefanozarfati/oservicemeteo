@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     radial-gradient(ellipse 60% 40% at 80% 5%,rgba(255,200,120,.45) 0%,transparent 55%),
     radial-gradient(ellipse 50% 60% at 5% 95%,rgba(180,60,0,.25) 0%,transparent 55%),
     linear-gradient(160deg,#ffaa50,#ff8c31 40%,#f07020 80%,#e06010)}
-.app{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:0 0 5rem}
+.app{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:0 0 5rem;overflow-x:hidden}
 
 /* Header */
 .hdr{display:flex;align-items:center;gap:1rem;margin-bottom:1.6rem}
@@ -194,13 +194,13 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .fcp{font-size:.67rem;color:var(--t2);margin-top:.2rem;line-height:1.3}
 
 /* Modelli */
-.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem}
-.mcard{background:rgba(255,255,255,.2);border-radius:9px;padding:.5rem .45rem;border:1px solid rgba(0,0,0,.1)}
-.mname{font-size:.6rem;text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:.25rem;white-space:nowrap}
-.mtemp{font-size:1rem;font-weight:800;white-space:nowrap}
-.mdesc{font-size:.67rem;color:var(--t2);margin-top:.18rem}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-top:.5rem}
+.mcard{background:rgba(255,255,255,.22);border-radius:9px;padding:.45rem .4rem;border:1px solid rgba(0,0,0,.1);overflow:hidden}
+.mname{font-size:.58rem;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:.2rem}
+.mtemp{font-size:.9rem;font-weight:800;display:flex;align-items:center;gap:.2rem;flex-wrap:wrap}
+.mdesc{font-size:.63rem;color:var(--t2);margin-top:.15rem;line-height:1.3}
 .conv{margin-top:.75rem;padding:.65rem .9rem;border-radius:9px;font-size:.85rem;line-height:1.5}
-.conv.ok{background:rgba(255,255,255,.3);border:1px solid rgba(0,100,30,.3);color:#1a5020}
+.conv.ok{background:rgba(255,255,255,.3);border:1px solid rgba(0,80,20,.3);color:#0a3010}
 .conv.warn{background:rgba(255,255,255,.3);border:1px solid rgba(120,50,0,.3);color:#6a2800}
 
 /* Consiglio */
@@ -249,10 +249,10 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
 .di-icon{font-size:.78rem;color:var(--o2);margin-bottom:.2rem;display:block;opacity:.85}
 
-.top-bar{position:sticky;top:0;z-index:100;
-  background:linear-gradient(to bottom,#2d1200 0%,#3d1a00 100%);
-  padding:1rem 1rem .8rem;
-  box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.top-bar{position:fixed;top:0;left:0;right:0;z-index:100;
+  background:linear-gradient(to bottom,#2d1200 0%,#3a1800 82%,rgba(50,20,0,0) 100%);
+  padding:1rem 1rem 1.8rem;
+  margin:0;padding-left:1rem;padding-right:1rem;width:100%;box-sizing:border-box}
 .top-bar .hdr h1{color:#FF8C30}
 .top-bar .hdr p{color:#a06030}
 .top-bar .sinp{background:rgba(255,255,255,.12);border-color:rgba(255,200,100,.3);color:#f0e0d0}
@@ -267,6 +267,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #radar-panel,#fav-wrap,#order-hint,#content{padding-left:1rem;padding-right:1rem}
 #radar-panel{padding-left:0;padding-right:0;margin:0 1rem}
 #fav-wrap{padding-top:.6rem}
+.content-wrap{padding-top:var(--hh,170px)}
 </style>
 </head>
 <body>
@@ -305,6 +306,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <!-- Radar panel -->
   </div><!-- fine top-bar -->
 
+  <div class="content-wrap">
   <div id="radar-panel">
     <div class="rdr-hdr">
       <span class="rdr-title">🌧️ Radar Precipitazioni</span>
@@ -362,6 +364,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     </div>
   </div>
 
+  </div><!-- fine content-wrap -->
 </div>
 
 <!-- Install banner -->
@@ -371,7 +374,16 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <button class="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+// Misura altezza top-bar e aggiorna padding
+function updateHeaderHeight(){
+  const tb=document.querySelector('.top-bar');
+  if(tb) document.documentElement.style.setProperty('--hh',tb.offsetHeight+'px');
+}
+window.addEventListener('load',updateHeaderHeight);
+window.addEventListener('resize',updateHeaderHeight);
+
+</script>
 <script>
 
 function renderAdviceBody(cur,d,dayIdx){
@@ -510,24 +522,24 @@ function renderAstro(d){
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
       <!-- Arco del sole -->
       <path d="M ${cx+rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx-rx} ${cy}"
-        fill="none" stroke="rgba(255,255,255,.15)" stroke-width="5" stroke-linecap="round"/>
+        fill="none" stroke="rgba(80,30,0,.3)" stroke-width="6" stroke-linecap="round"/>
       <!-- Parte percorsa -->
       ${isDay?`<path d="M ${cx-rx} ${cy} A ${rx} ${ry} 0 0 1 ${sx} ${sy}"
-        fill="none" stroke="url(#sunGrad)" stroke-width="5.5" stroke-linecap="round"/>
+        fill="none" stroke="#c05000" stroke-width="6.5" stroke-linecap="round"/>
       <!-- Sole attuale -->
-      <circle cx="${sx}" cy="${sy}" r="10" fill="#F07020" opacity=".25"/>
-      <circle cx="${sx}" cy="${sy}" r="6" fill="#FF8C30"/>
+      <circle cx="${sx}" cy="${sy}" r="14" fill="#c05000" opacity=".2"/>
+      <circle cx="${sx}" cy="${sy}" r="8" fill="#c05000" stroke="white" stroke-width="2"/>
       <text x="${sx}" y="${sy+1}" text-anchor="middle" dominant-baseline="middle" font-size="10">☀</text>`:''}
       <!-- Etichette -->
-      <text x="${cx-rx-2}" y="${cy+18}" text-anchor="middle" font-size="14" fill="#e0e0e0" font-weight="bold">E</text>
-      <text x="${cx}" y="${cy-ry-10}" text-anchor="middle" font-size="14" fill="#e0e0e0" font-weight="bold">S</text>
-      <text x="${cx+rx+2}" y="${cy+18}" text-anchor="middle" font-size="14" fill="#e0e0e0" font-weight="bold">O</text>
+      <text x="${cx-rx-2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">E</text>
+      <text x="${cx}" y="${cy-ry-10}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">S</text>
+      <text x="${cx+rx+2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">O</text>
       <!-- Linea orizzonte -->
-      <line x1="${cx-rx-15}" y1="${cy}" x2="${cx+rx+15}" y2="${cy}" stroke="rgba(255,255,255,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="${cx-rx-15}" y1="${cy}" x2="${cx+rx+15}" y2="${cy}" stroke="rgba(80,30,0,.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
       <defs>
         <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style="stop-color:#F07020;stop-opacity:.6"/>
-          <stop offset="100%" style="stop-color:#FF8C30;stop-opacity:1"/>
+          <stop offset="0%" style="stop-color:#8a3000;stop-opacity:.7"/>
+          <stop offset="100%" style="stop-color:#c05000;stop-opacity:1"/>
         </linearGradient>
       </defs>
     </svg>
@@ -578,7 +590,7 @@ function wiUrl(code, isDay){
 }
 function wiImg(code, isDay, size){
   size=size||44;
-  return '<img src="'+wiUrl(code,isDay)+'" width="'+size+'" height="'+size+'" style="display:inline-block;vertical-align:middle;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))" loading="lazy" alt="'+wl(code)+'">';
+  return '<img src="'+wiUrl(code,isDay)+'" width="'+size+'" height="'+size+'" style="display:inline-block;vertical-align:middle;background:rgba(255,255,255,.55);border-radius:50%;filter:drop-shadow(0 1px 4px rgba(0,0,0,.25))" loading="lazy" alt="'+wl(code)+'">';
 }
 function pCol(mm){if(!mm||mm<.2)return"#2ab84a";if(mm<3)return"#f09020";if(mm<12)return"#e05020";return"#b02020";}
 function wDir(d){return["N","NE","E","SE","S","SO","O","NO"][Math.round((d||0)/45)%8]||"—";}
@@ -962,7 +974,7 @@ function renderHourlyInner(){
   }).join("");
   return `<div style="font-size:.75rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${label}</div>
     <div class="hscroll" id="hscroll-main"><div class="htable">${cols}</div></div>
-    <div class="hfoot">🌅 ${fmtT(d.sunrise[selDay])} · 🌇 ${fmtT(d.sunset[selDay])} · vento km/h · ↑raffiche</div>`;
+    `;
 }
 
 function outdoorAdvice(cur,d,dayIdx){
