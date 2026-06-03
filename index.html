@@ -1128,6 +1128,7 @@ function toggleRadar(){
     setTimeout(()=>{
       if(curRadarMode==="rv")initRV();
       else if(curRadarMode==="dpc")initDPC();
+      else if(curRadarMode==="windy")initWindy();
     },100);
   } else {
     stopR();stopD();
@@ -1163,7 +1164,8 @@ async function initRV(){
   if(!rMap){
     rMap=L.map("rmap",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],12);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(rMap);
-  } else {rMap.setView([lat,lon],12);rMap.invalidateSize();}
+  } else {rMap.setView([lat,lon],12);}
+  setTimeout(()=>{if(rMap)rMap.invalidateSize();},200);
   try{
     const resp=await fetch("https://api.rainviewer.com/public/weather-maps.json");
     const data=await resp.json();
@@ -1218,7 +1220,8 @@ async function initDPC(){
   if(!dMap){
     dMap=L.map("dpc-map",{zoomControl:true,attributionControl:false,maxZoom:14}).setView([lat,lon],12);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(dMap);
-  } else {dMap.setView([lat,lon],12);dMap.invalidateSize();}
+  } else {dMap.setView([lat,lon],12);}
+  setTimeout(()=>{if(dMap)dMap.invalidateSize();},200);
   const now=new Date();
   dFrames=[];
   for(let i=5;i>=0;i--){
@@ -1296,7 +1299,7 @@ function initWindy(){
   var lon=CUR&&CUR.lon?CUR.lon:12.5;
   var url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)
     +"&lon="+lon.toFixed(3)
-    +"&zoom=8&level=surface&overlay=radar"
+    +"&zoom=11&level=surface&overlay=radar"
     +"&menu=&message=true&marker=true&calendar=now"
     +"&type=map&location=coordinates"
     +"&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
