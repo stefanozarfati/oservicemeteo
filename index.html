@@ -204,8 +204,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .conv.warn{background:rgba(255,255,255,.3);border:1px solid rgba(120,50,0,.3);color:#6a2800}
 
 /* Consiglio */
-.cons{background:rgba(255,255,255,.3);border:1px solid rgba(120,50,0,.2);color:#5a1e00;
-  border-radius:12px;padding:1rem 1.1rem;font-size:.95rem;color:#7ae89a;line-height:1.7}
+.cons{background:rgba(255,255,255,.3);border:1px solid rgba(120,50,0,.2);color:#5a1e00;border-radius:12px;padding:1rem 1.1rem;font-size:.95rem;line-height:1.7}
 
 /* Loader/Error/Empty */
 .ldiv{text-align:center;padding:3rem}
@@ -267,7 +266,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #radar-panel,#fav-wrap,#order-hint,#content{padding-left:1rem;padding-right:1rem}
 #radar-panel{padding-left:0;padding-right:0;margin:0 1rem}
 #fav-wrap{padding-top:.6rem}
-.content-wrap{padding-top:var(--hh,185px)}
+.content-wrap{padding-top:var(--hh,200px)}
 </style>
 </head>
 <body>
@@ -378,10 +377,15 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 // Misura altezza top-bar e aggiorna padding
 function updateHeaderHeight(){
   const tb=document.querySelector('.top-bar');
-  if(tb) document.documentElement.style.setProperty('--hh',tb.offsetHeight+'px');
+  if(tb){
+    const h=tb.offsetHeight;
+    document.documentElement.style.setProperty('--hh',(h+12)+'px');
+  }
 }
 window.addEventListener('load',updateHeaderHeight);
 window.addEventListener('resize',updateHeaderHeight);
+// Ricalcola dopo ogni render (le previsioni aggiungono "Salva nei preferiti")
+const _origRender=typeof render==='function'?render:null;
 
 </script>
 <script>
@@ -858,7 +862,10 @@ function render(){
   document.getElementById("order-hint").style.display="block";
   document.getElementById("inp").value=CUR.name+(CUR.region?", "+CUR.region:"");
   // Scroll ai risultati
-  setTimeout(()=>document.getElementById("content").scrollIntoView({behavior:"smooth",block:"start"}),100);
+  setTimeout(()=>{
+    updateHeaderHeight();
+    document.getElementById("content").scrollIntoView({behavior:"smooth",block:"start"});
+  },100);
   // Scroll all'ora corrente nelle previsioni orarie
   setTimeout(()=>{
     const hs=document.getElementById("hscroll-main");
