@@ -401,20 +401,7 @@ window.addEventListener('resize',updateHeaderHeight);
 const _origRender=typeof render==='function'?render:null;
 
 
-function initWindy(){
-  const frame=document.getElementById("windy-frame");
-  if(!frame) return;
-  const lat=CUR?.lat||41.9;
-  const lon=CUR?.lon||12.5;
-  // URL semplificato — formato confermato funzionante
-  const url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)
-    +"&lon="+lon.toFixed(3)
-    +"&zoom=8&level=surface&overlay=radar"
-    +"&menu=&message=true&marker=true&calendar=now"
-    +"&type=map&location=coordinates"
-    +"&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
-  frame.src=url;
-}
+
 
 </script>
 <script>
@@ -934,22 +921,38 @@ function renderCurrentBody(cur,d){
 function renderModelsBody(i){
   if(!wxData)return"";
   const {ecmwf,icon,gfs}=wxData;
-  // Per oggi: calcola mm rimanenti (dall'ora attuale a mezzanotte) con best_match orario
-  var todayRemainMm=null, todayRemainNote="";
+  // Per OGGI: calcola tutto (mm, probabilità, temp) dalle ore rimanenti
+  // (dall'ora attuale a mezzanotte), non dall'intera giornata
+  var todayRemainMm=null, todayRemainNote="", todayProb=null, todayTmax=null, todayTmin=null;
   if(i===0&&wxData.main.hourly){
     var h=wxData.main.hourly;
     var now=new Date();
-    var todayStr=now.toISOString().slice(0,10);
+    // Data locale (non UTC) per allinearsi agli orari Open-Meteo
+    var todayStr=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
     var curHour=now.getHours();
-    var sumMm=0;
+    var sumMm=0, maxProb=0, tMax=-99, tMin=99, anyHour=false;
     for(var j=0;j<h.time.length;j++){
       if(h.time[j].startsWith(todayStr)){
         var hh=parseInt(h.time[j].substring(11,13));
-        if(hh>=curHour) sumMm+=(h.precipitation[j]||0);
+        if(hh>=curHour){
+          anyHour=true;
+          sumMm+=(h.precipitation[j]||0);
+          if(h.precipitation_probability&&h.precipitation_probability[j]!=null)
+            maxProb=Math.max(maxProb,h.precipitation_probability[j]);
+          if(h.temperature_2m&&h.temperature_2m[j]!=null){
+            tMax=Math.max(tMax,h.temperature_2m[j]);
+            tMin=Math.min(tMin,h.temperature_2m[j]);
+          }
+        }
       }
     }
-    todayRemainMm=sumMm.toFixed(1);
-    todayRemainNote=" ("+String(curHour).padStart(2,"0")+":00–00:00)";
+    if(anyHour){
+      todayRemainMm=sumMm.toFixed(1);
+      todayProb=maxProb;
+      todayTmax=Math.round(tMax);
+      todayTmin=Math.round(tMin);
+      todayRemainNote=" ("+String(curHour).padStart(2,"0")+":00–00:00)";
+    }
   }
   const tm={
     e:{max:Math.round(ecmwf.daily?.temperature_2m_max?.[i]),min:Math.round(ecmwf.daily?.temperature_2m_min?.[i]),wmo:ecmwf.daily?.weather_code?.[i],mm:parseFloat(ecmwf.daily?.precipitation_sum?.[i]||0).toFixed(1)},
@@ -958,8 +961,8 @@ function renderModelsBody(i){
   };
   const maxs=[tm.e.max,tm.i.max,tm.g.max].filter(x=>!isNaN(x)&&x!==undefined);
   const diff=maxs.length>1?Math.max(...maxs)-Math.min(...maxs):0;
-  // Probabilità pioggia dal modello principale (best_match)
-  const prob=wxData.main.daily.precipitation_probability_max?.[i]||0;
+  // Probabilità pioggia — per oggi dalle ore rimanenti, altrimenti dal daily
+  const prob=(i===0&&todayProb!==null)?todayProb:(wxData.main.daily.precipitation_probability_max?.[i]||0);
   const probLabel=prob<=10?"Molto bassa":prob<=30?"Bassa":prob<=60?"Moderata":prob<=80?"Alta":"Molto alta";
   const probColor=prob<=10?"#2ab84a":prob<=30?"#8ab84a":prob<=60?"#f09020":prob<=80?"#e05020":"#b02020";
 
@@ -984,18 +987,18 @@ function renderModelsBody(i){
 
   return `<div style="font-size:.72rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${fmtDay(wxData.main.daily.time[i],i)}</div>
   <div style="padding:.65rem .9rem;border-radius:9px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);margin-bottom:.4rem">
-    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:#4a2000;margin-bottom:.3rem;font-weight:700">Probabilità di pioggia</div>
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:#4a2000;margin-bottom:.3rem;font-weight:700">Probabilità di pioggia${i===0&&todayProb!==null?" · prossime ore":""}</div>
     <div style="font-size:1.3rem;font-weight:800;color:${probColor}">${prob}%</div>
     <div style="font-size:.78rem;color:${probColor};margin-top:.1rem">${probLabel}</div>
   </div>
   <div class="conv ${mmClass}" style="margin-bottom:.4rem">${mmConv}</div>
   <div class="conv" style="margin-bottom:.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--t2)">${convT}</div>
   <div class="mgrid">
-    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wiImg(tm.e.wmo,true,28)} ${tm.e.min}°/${tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wiImg(tm.i.wmo,true,28)} ${tm.i.min}°/${tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
-    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wiImg(tm.g.wmo,true,28)} ${tm.g.min}°/${tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#6090e0">ECMWF <span class="tag tag-ecmwf">Europeo</span></div><div class="mtemp">${wiImg(tm.e.wmo,true,28)} ${i===0&&todayTmin!==null?todayTmin:tm.e.min}°/${i===0&&todayTmax!==null?todayTmax:tm.e.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.e.mm}mm</strong> · ${wl(tm.e.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#50c070">ICON-D2 <span class="tag tag-icon">Tedesco</span></div><div class="mtemp">${wiImg(tm.i.wmo,true,28)} ${i===0&&todayTmin!==null?todayTmin:tm.i.min}°/${i===0&&todayTmax!==null?todayTmax:tm.i.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.i.mm}mm</strong> · ${wl(tm.i.wmo)}</div></div>
+    <div class="mcard"><div class="mname" style="color:#e08040">GFS <span class="tag tag-gfs">Americano</span></div><div class="mtemp">${wiImg(tm.g.wmo,true,28)} ${i===0&&todayTmin!==null?todayTmin:tm.g.min}°/${i===0&&todayTmax!==null?todayTmax:tm.g.max}°C</div><div class="mdesc" style="margin-top:.4rem">🌧️ <strong>${i===0&&todayRemainMm!==null?todayRemainMm:tm.g.mm}mm</strong> · ${wl(tm.g.wmo)}</div></div>
   </div>
-  ${i===0&&todayRemainMm!==null?`<div style="font-size:.68rem;color:#7a3010;margin-top:.3rem;text-align:center;font-style:italic">🌧️ Precipitazioni best_match${todayRemainNote}</div>`:''}`;
+  ${i===0&&todayRemainMm!==null?`<div style="font-size:.68rem;color:#7a3010;margin-top:.3rem;text-align:center;font-style:italic">⏱ Valori per le ore rimanenti${todayRemainNote}</div>`:''}`;
 }
 
 function renderHourlyInner(){
@@ -1271,7 +1274,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v6";
+    const sw=`const C="osm-v7";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
@@ -1283,6 +1286,21 @@ self.addEventListener("fetch",e=>{
     const blob=new Blob([sw],{type:"application/javascript"});
     navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
   });
+}
+
+
+function initWindy(){
+  var frame=document.getElementById("windy-frame");
+  if(!frame) return;
+  var lat=CUR&&CUR.lat?CUR.lat:41.9;
+  var lon=CUR&&CUR.lon?CUR.lon:12.5;
+  var url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)
+    +"&lon="+lon.toFixed(3)
+    +"&zoom=8&level=surface&overlay=radar"
+    +"&menu=&message=true&marker=true&calendar=now"
+    +"&type=map&location=coordinates"
+    +"&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
+  frame.src=url;
 }
 
 </script>
