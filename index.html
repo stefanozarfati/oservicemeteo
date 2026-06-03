@@ -339,7 +339,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     </div>
     <!-- Windy embed -->
     <div class="dpc-wrap" id="windy-wrap">
-      <iframe id="windy-frame" src="" style="width:100%;height:500px;border:none;display:block" allowfullscreen></iframe>
+      <iframe id="windy-frame" src="" style="width:100%;height:500px;border:none;display:block" allow="geolocation" allowfullscreen></iframe>
       <div style="padding:.4rem 1rem;font-size:.68rem;color:var(--t3)">
         Dati: <a href="https://www.windy.com" target="_blank" style="color:#3ab0ff">Windy.com</a> · Radar osservato + previsioni · Zoom e layer configurabili
       </div>
@@ -386,7 +386,8 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <button class="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
 // Misura altezza top-bar e aggiorna padding
 function updateHeaderHeight(){
   const tb=document.querySelector('.top-bar');
@@ -403,8 +404,7 @@ const _origRender=typeof render==='function'?render:null;
 
 
 
-</script>
-<script>
+
 
 function renderAdviceBody(cur,d,dayIdx){
   dayIdx=dayIdx||0;
@@ -1295,13 +1295,17 @@ self.addEventListener("fetch",e=>{
 function initWindy(){
   var frame=document.getElementById("windy-frame");
   if(!frame) return;
-  var lat=CUR&&CUR.lat?CUR.lat:41.9;
-  var lon=CUR&&CUR.lon?CUR.lon:12.5;
-  var url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)
-    +"&lon="+lon.toFixed(3)
+  // Coordinate sicure (mai NaN)
+  var lat=(CUR&&!isNaN(CUR.lat))?CUR.lat:41.9;
+  var lon=(CUR&&!isNaN(CUR.lon))?CUR.lon:12.5;
+  var la=lat.toFixed(3), lo=lon.toFixed(3);
+  // detailLat/detailLon espliciti = niente tentativo di geolocalizzazione GPS
+  var url="https://embed.windy.com/embed2.html?lat="+la
+    +"&lon="+lo
+    +"&detailLat="+la+"&detailLon="+lo
     +"&zoom=11&level=surface&overlay=radar"
     +"&menu=&message=true&marker=true&calendar=now"
-    +"&type=map&location=coordinates"
+    +"&pressure=&type=map&detail=true"
     +"&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
   frame.src=url;
 }
