@@ -250,9 +250,9 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
 .top-bar{position:fixed;top:0;left:0;right:0;z-index:100;
   background:#3a1800;
-  padding:1rem 1rem 1.8rem;
+  padding:1rem 1rem 0;
   margin:0;padding-left:1rem;padding-right:1rem;width:100%;box-sizing:border-box;
-  box-shadow:0 3px 8px rgba(40,15,0,.45)}
+  box-shadow:0 6px 10px rgba(40,15,0,.5)}
 .top-bar .hdr h1{color:#FF8C30}
 .top-bar .hdr p{color:#a06030}
 .top-bar .sinp{background:rgba(255,255,255,.12);border-color:rgba(255,200,100,.3);color:#f0e0d0}
@@ -268,6 +268,8 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #radar-panel{padding-left:0;padding-right:0;margin:0 1rem}
 #fav-wrap{padding-top:.6rem}
 .content-wrap{padding-top:var(--hh,200px)}
+
+.top-bar .abar{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -629,13 +631,15 @@ function togglePanel(id,btnId){
   const p=document.getElementById(id);
   const b=document.getElementById(btnId);
   const isOpen=p.classList.contains("open");
-  // Chiudi tutti
-  ["pnl-fav","pnl-rec"].forEach(x=>{
-    document.getElementById(x).classList.remove("open");
-  });
-  ["btn-fav","btn-rec"].forEach(x=>{
-    document.getElementById(x).classList.remove("open");
-  });
+  // Chiudi tutti i pannelli incluso radar
+  ["pnl-fav","pnl-rec"].forEach(x=>document.getElementById(x).classList.remove("open"));
+  ["btn-fav","btn-rec"].forEach(x=>document.getElementById(x).classList.remove("open"));
+  const rp=document.getElementById("radar-panel");
+  if(rp&&rp.classList.contains("open")){
+    rp.classList.remove("open");
+    document.getElementById("btn-radar").classList.remove("open");
+    stopR();stopD();
+  }
   if(!isOpen){
     p.classList.add("open");
     b.classList.add("open");
