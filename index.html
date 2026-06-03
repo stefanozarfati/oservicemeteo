@@ -406,13 +406,14 @@ function initWindy(){
   if(!frame) return;
   const lat=CUR?.lat||41.9;
   const lon=CUR?.lon||12.5;
-  const url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)+"&lon="+lon.toFixed(3)+
-    "&detailLat="+lat.toFixed(3)+"&detailLon="+lon.toFixed(3)+
-    "&width=650&height=500&zoom=8&level=surface&overlay=radar"+
-    "&product=ecmwf&menu=&message=true&marker=true"+
-    "&calendar=now&pressure=&type=map&location=coordinates"+
-    "&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
-  if(frame.src!==url) frame.src=url;
+  // URL semplificato — formato confermato funzionante
+  const url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)
+    +"&lon="+lon.toFixed(3)
+    +"&zoom=8&level=surface&overlay=radar"
+    +"&menu=&message=true&marker=true&calendar=now"
+    +"&type=map&location=coordinates"
+    +"&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
+  frame.src=url;
 }
 
 </script>
