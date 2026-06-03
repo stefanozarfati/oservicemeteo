@@ -933,6 +933,23 @@ function renderCurrentBody(cur,d){
 function renderModelsBody(i){
   if(!wxData)return"";
   const {ecmwf,icon,gfs}=wxData;
+  // Per oggi: calcola mm rimanenti (dall'ora attuale a mezzanotte) con best_match orario
+  var todayRemainMm=null, todayRemainNote="";
+  if(i===0&&wxData.main.hourly){
+    var h=wxData.main.hourly;
+    var now=new Date();
+    var todayStr=now.toISOString().slice(0,10);
+    var curHour=now.getHours();
+    var sumMm=0;
+    for(var j=0;j<h.time.length;j++){
+      if(h.time[j].startsWith(todayStr)){
+        var hh=parseInt(h.time[j].substring(11,13));
+        if(hh>=curHour) sumMm+=(h.precipitation[j]||0);
+      }
+    }
+    todayRemainMm=sumMm.toFixed(1);
+    todayRemainNote=" ("+String(curHour).padStart(2,"0")+":00–00:00)";
+  }
   const tm={
     e:{max:Math.round(ecmwf.daily?.temperature_2m_max?.[i]),min:Math.round(ecmwf.daily?.temperature_2m_min?.[i]),wmo:ecmwf.daily?.weather_code?.[i],mm:parseFloat(ecmwf.daily?.precipitation_sum?.[i]||0).toFixed(1)},
     i:{max:Math.round(icon.daily?.temperature_2m_max?.[i]),min:Math.round(icon.daily?.temperature_2m_min?.[i]),wmo:icon.daily?.weather_code?.[i],mm:parseFloat(icon.daily?.precipitation_sum?.[i]||0).toFixed(1)},
