@@ -248,7 +248,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
 .di-icon{font-size:.78rem;color:var(--o2);margin-bottom:.2rem;display:block;opacity:.85}
 
-.top-bar{position:fixed;top:0;left:0;right:0;z-index:100;
+.top-bar{position:fixed;top:0;left:0;right:0;z-index:5000;
   background:#3a1800;
   padding:1rem 1rem 7px;
   margin:0;padding-left:1rem;padding-right:1rem;width:100%;box-sizing:border-box;
@@ -272,6 +272,10 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .top-bar .abar{margin-bottom:0}
 
 .top-bar .abar{margin-bottom:0}
+
+.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:auto !important}
+.leaflet-container{z-index:1}
+#radar-panel{position:relative;z-index:1}
 </style>
 </head>
 <body>
@@ -341,7 +345,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     <div class="dpc-wrap" id="windy-wrap">
       <iframe id="windy-frame" src="" style="width:100%;height:500px;border:none;display:block" allow="geolocation" allowfullscreen></iframe>
       <div style="padding:.4rem 1rem;font-size:.68rem;color:var(--t3)">
-        Dati: <a href="https://www.windy.com" target="_blank" style="color:#3ab0ff">Windy.com</a> · Radar osservato + previsioni · Zoom e layer configurabili
+        <a href="https://www.windy.com" target="_blank" style="color:#3ab0ff">Windy.com</a>
       </div>
     </div>
     <!-- DPC -->
@@ -1304,8 +1308,8 @@ function initWindy(){
     +"&lon="+lo
     +"&detailLat="+la+"&detailLon="+lo
     +"&zoom=11&level=surface&overlay=radar&product=radar"
-    +"&menu=&message=true&marker=true&calendar=now"
-    +"&pressure=&type=map&detail=true"
+    +"&menu=&message=&marker=true&calendar=now"
+    +"&pressure=&type=map&detail="
     +"&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
   frame.src=url;
 }
