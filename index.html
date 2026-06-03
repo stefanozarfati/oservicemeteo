@@ -317,6 +317,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       <div class="rdr-tabs">
         <button class="rtab act" id="rtab-rv" onclick="switchRadar('rv')">Rainviewer</button>
         <button class="rtab" id="rtab-dpc" onclick="switchRadar('dpc')">Prot. Civile</button>
+        <button class="rtab" id="rtab-windy" onclick="switchRadar('windy')" style="border-color:rgba(80,180,255,.4);color:#3ab0ff">Windy ★</button>
       </div>
       <button class="rdr-close" onclick="toggleRadar()">✕</button>
     </div>
@@ -334,6 +335,13 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
         <div class="rl-dot" style="background:#6ab4e0"></div><span>Passato 30 min</span>
         <div class="rl-dot" style="background:#ff8c30;margin-left:.5rem"></div><span>Nowcast 30 min</span>
         <span style="margin-left:auto;font-size:.65rem">RainViewer</span>
+      </div>
+    </div>
+    <!-- Windy embed -->
+    <div class="dpc-wrap" id="windy-wrap">
+      <iframe id="windy-frame" src="" style="width:100%;height:500px;border:none;display:block" allowfullscreen></iframe>
+      <div style="padding:.4rem 1rem;font-size:.68rem;color:var(--t3)">
+        Dati: <a href="https://www.windy.com" target="_blank" style="color:#3ab0ff">Windy.com</a> · Radar osservato + previsioni · Zoom e layer configurabili
       </div>
     </div>
     <!-- DPC -->
@@ -391,6 +399,21 @@ window.addEventListener('load',updateHeaderHeight);
 window.addEventListener('resize',updateHeaderHeight);
 // Ricalcola dopo ogni render (le previsioni aggiungono "Salva nei preferiti")
 const _origRender=typeof render==='function'?render:null;
+
+
+function initWindy(){
+  const frame=document.getElementById("windy-frame");
+  if(!frame) return;
+  const lat=CUR?.lat||41.9;
+  const lon=CUR?.lon||12.5;
+  const url="https://embed.windy.com/embed2.html?lat="+lat.toFixed(3)+"&lon="+lon.toFixed(3)+
+    "&detailLat="+lat.toFixed(3)+"&detailLon="+lon.toFixed(3)+
+    "&width=650&height=500&zoom=8&level=surface&overlay=radar"+
+    "&product=ecmwf&menu=&message=true&marker=true"+
+    "&calendar=now&pressure=&type=map&location=coordinates"+
+    "&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1";
+  if(frame.src!==url) frame.src=url;
+}
 
 </script>
 <script>
@@ -1094,19 +1117,23 @@ function refreshRadarPos(){
   if(!CUR)return;
   if(rMap) rMap.setView([CUR.lat,CUR.lon],12);
   if(dMap) dMap.setView([CUR.lat,CUR.lon],12);
+  // Ricarica Windy se aperto con nuova posizione
+  if(curRadarMode==="windy") initWindy();
 }
 
 function switchRadar(mode){
   curRadarMode=mode;
-  ["rv","dpc"].forEach(m=>{
+  ["rv","dpc","windy"].forEach(m=>{
     const t=document.getElementById("rtab-"+m);
     if(t) t.classList.toggle("act",m===mode);
   });
   document.getElementById("rv-wrap").style.display=mode==="rv"?"block":"none";
   document.getElementById("dpc-wrap").style.display=mode==="dpc"?"block":"none";
+  document.getElementById("windy-wrap").style.display=mode==="windy"?"block":"none";
   stopR();stopD();
-  if(mode==="rv")initRV();
-  else if(mode==="dpc")initDPC();
+  if(mode==="rv") initRV();
+  else if(mode==="dpc") initDPC();
+  else if(mode==="windy") initWindy();
 }
 
 
