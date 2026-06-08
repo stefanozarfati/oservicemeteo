@@ -42,7 +42,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 /* Search */
 .srow{position:relative;margin-bottom:.6rem}
 .sinp{width:100%;background:rgba(255,255,255,.35);border:2px solid rgba(0,0,0,.2);
-  border-radius:13px;padding:.95rem 6.5rem .95rem 1.2rem;color:var(--t);
+  border-radius:13px;padding:.95rem 8.5rem .95rem 1.2rem;color:var(--t);
   font-size:1rem;font-family:'Raleway',sans-serif;outline:none;transition:.2s}
 .sinp:focus{border-color:var(--o);box-shadow:0 0 0 3px rgba(240,112,32,.15)}
 .sinp::placeholder{color:rgba(80,30,0,.55)}
@@ -276,6 +276,14 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:auto !important}
 .leaflet-container{z-index:1}
 #radar-panel{position:relative;z-index:1}
+
+.clr-btn{position:absolute;right:5.6rem;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;font-size:1rem;padding:.3rem;
+  color:var(--t3);transition:.2s;border-radius:6px;display:none}
+.clr-btn:hover{color:var(--o);background:rgba(240,112,32,.1)}
+.clr-btn.show{display:block}
+.top-bar .clr-btn{color:rgba(200,140,80,.7)}
+.top-bar .clr-btn:hover{color:#FF8C30}
 </style>
 </head>
 <body>
@@ -297,6 +305,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     <input class="sinp" id="inp" placeholder="Città, monte, valle, frazione..."
       autocomplete="off" autocorrect="off" spellcheck="false"
       onkeydown="if(event.key==='Enter'){document.getElementById('sug').classList.remove('open');go();}">
+    <button class="clr-btn" id="clr-btn" onclick="clearSearch()" title="Cancella"><i class="fa-solid fa-xmark"></i></button>
     <button class="gps-btn" id="gps-btn" onclick="useGPS()" title="Usa posizione attuale"><i class="fa-solid fa-location-crosshairs"></i></button>
     <button class="sbtn" onclick="document.getElementById('sug').classList.remove('open');go()">🔍</button>
   </div>
@@ -319,9 +328,9 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     <div class="rdr-hdr">
       <span class="rdr-title">🌧️ Radar Precipitazioni</span>
       <div class="rdr-tabs">
-        <button class="rtab act" id="rtab-rv" onclick="switchRadar('rv')">Rainviewer</button>
+        <button class="rtab act" id="rtab-windy" onclick="switchRadar('windy')" style="border-color:rgba(0,90,160,.5);color:#005aa0;font-weight:700">Windy ★</button>
+        <button class="rtab" id="rtab-rv" onclick="switchRadar('rv')">Rainviewer</button>
         <button class="rtab" id="rtab-dpc" onclick="switchRadar('dpc')">Prot. Civile</button>
-        <button class="rtab" id="rtab-windy" onclick="switchRadar('windy')" style="border-color:rgba(80,180,255,.4);color:#3ab0ff">Windy ★</button>
       </div>
       <button class="rdr-close" onclick="toggleRadar()">✕</button>
     </div>
@@ -390,7 +399,34 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <button class="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+
+function updateClearBtn(){
+  var inp=document.getElementById("inp");
+  var clr=document.getElementById("clr-btn");
+  if(inp&&clr) clr.classList.toggle("show",inp.value.length>0);
+}
+
+function clearSearch(){
+  var inp=document.getElementById("inp");
+  inp.value="";
+  inp.focus();
+  document.getElementById("clr-btn").classList.remove("show");
+  var sug=document.getElementById("sug");
+  if(sug){sug.innerHTML="";sug.classList.remove("open");}
+}
+// Mostra/nascondi X in base al contenuto dell'input
+document.addEventListener("DOMContentLoaded",function(){
+  var inp=document.getElementById("inp");
+  var clr=document.getElementById("clr-btn");
+  if(inp&&clr){
+    inp.addEventListener("input",function(){
+      clr.classList.toggle("show",inp.value.length>0);
+    });
+  }
+});
+
+</script>
 <script>
 // Misura altezza top-bar e aggiorna padding
 function updateHeaderHeight(){
@@ -447,7 +483,7 @@ function useGPS(){
         const addr=d.address||{};
         const name=addr.village||addr.hamlet||addr.town||addr.suburb||addr.city||addr.county||"Posizione attuale";
         const region=[addr.city||addr.town,addr.county||addr.state_district,addr.state].filter(Boolean).filter(function(x){return x!==name;}).join(", ");
-        document.getElementById("inp").value=name+(region?", "+region:"");
+        document.getElementById("inp").value=name+(region?", "+region:"");updateClearBtn();
         fetchWeather(lat,lon,name,region);
       }catch(e){
         fetchWeather(lat,lon,"Posizione GPS ("+lat.toFixed(3)+", "+lon.toFixed(3)+"°)","");
@@ -573,11 +609,22 @@ function renderAstro(d){
   const hLight=Math.floor(dayLen/60), mLight=dayLen%60;
 
   // Posizione sole sull'arco SVG
-  // Arco: semicerchio da sinistra (alba/Est) a destra (tramonto/Ovest), con picco in alto (Sud)
+  // Determina verso quale punto cardinale culmina il sole (Sud in emisfero nord, Nord in emisfero sud)
+  // Si basa sull'azimut reale a mezzogiorno: vicino a 180=Sud, vicino a 0/360=Nord
+  var sunAz=sun.azimuth;
+  // L'osservatore guarda verso la culminazione: Sud se azimut nell'arco 90-270, altrimenti Nord
+  // Usiamo la latitudine e la declinazione per decidere il polo di culminazione
+  var culminatesNorth=(CUR.lat<sun.decl); // se la latitudine è sotto la declinazione, il sole culmina a Nord
   const W=320, H=180, cx=W/2, cy=H-10, rx=cx-20, ry=H-30;
-  const angle=Math.PI*(1-prog); // π=alba(sx), 0=tramonto(dx)
-  const sx=cx+rx*Math.cos(angle);
+  const angle=Math.PI*(1-prog); // π=alba, 0=tramonto
+  // Emisfero nord (culmina a Sud): alba a sinistra(Est), tramonto a destra(Ovest)
+  // Emisfero sud (culmina a Nord): specchiato — alba a destra(Est), tramonto a sinistra(Ovest)
+  const sx=culminatesNorth ? (cx-rx*Math.cos(angle)) : (cx+rx*Math.cos(angle));
   const sy=cy-ry*Math.sin(angle);
+  // Etichette adattate all'emisfero
+  const lblTop=culminatesNorth?"N":"S";
+  const lblLeft=culminatesNorth?"O":"E";
+  const lblRight=culminatesNorth?"E":"O";
 
   const cardinal=azimuthToCardinal(sun.azimuth);
   // Direzione luna (mostrata di notte quando il sole è sotto l'orizzonte)
@@ -607,7 +654,7 @@ function renderAstro(d){
       <path d="M ${cx+rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx-rx} ${cy}"
         fill="none" stroke="rgba(80,30,0,.3)" stroke-width="6" stroke-linecap="round"/>
       <!-- Parte percorsa -->
-      ${isDay?`<path d="M ${cx-rx} ${cy} A ${rx} ${ry} 0 0 1 ${sx} ${sy}"
+      ${isDay?`<path d="M ${culminatesNorth?(cx-rx):(cx+rx)} ${cy} A ${rx} ${ry} 0 0 ${culminatesNorth?1:0} ${sx} ${sy}"
         fill="none" stroke="#c05000" stroke-width="6.5" stroke-linecap="round"/>
       <!-- Sole attuale -->
       <circle cx="${sx}" cy="${sy}" r="14" fill="#c05000" opacity=".2"/>
@@ -744,7 +791,7 @@ function delFav(name){ST.sF(ST.gF().filter(x=>x.name!==name));renderFavPanel();u
 function goQuick(lat,lon,name,region){
   ["pnl-fav","pnl-rec"].forEach(x=>document.getElementById(x).classList.remove("open"));
   ["btn-fav","btn-rec"].forEach(x=>document.getElementById(x).classList.remove("open"));
-  document.getElementById("inp").value=name+(region?", "+region:"");
+  document.getElementById("inp").value=name+(region?", "+region:"");updateClearBtn();
   fetchWeather(lat,lon,name,region);
 }
 function updateFavBtn(){
@@ -849,7 +896,7 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 function selSug(lat,lon,name,region){
-  document.getElementById("inp").value=name+(region?", "+region:"");
+  document.getElementById("inp").value=name+(region?", "+region:"");updateClearBtn();
   document.getElementById("sug").classList.remove("open");
   fetchWeather(lat,lon,name,region);
 }
@@ -941,11 +988,12 @@ function render(){
   document.getElementById("content").insertAdjacentHTML("beforeend",`<div style="font-size:.7rem;color:var(--t3);text-align:center;margin-top:.3rem">Dati: Open-Meteo · ECMWF · ICON-D2 · GFS · Aggiornamento orario</div>`);
   updateFavBtn();
   document.getElementById("order-hint").style.display="block";
-  document.getElementById("inp").value=CUR.name+(CUR.region?", "+CUR.region:"");
+  document.getElementById("inp").value=CUR.name+(CUR.region?", "+CUR.region:"");updateClearBtn();
   // Scroll ai risultati — tiene conto dell'header fisso
   setTimeout(()=>{
     updateHeaderHeight();
-    const el=document.getElementById("content");
+    // Scrolla al primo elemento dei risultati (pulsante preferiti), non a content
+    const el=document.getElementById("fav-wrap")||document.getElementById("content");
     if(el){
       const hh=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--hh"))||200;
       const y=el.getBoundingClientRect().top+window.pageYOffset-hh-12;
@@ -1054,7 +1102,7 @@ function renderModelsBody(i){
   const convT=diff<=2?"✅ Temperatura concordante (±"+diff+"°C)":"⚠️ Temperatura divergente: "+Math.min(...maxs)+"–"+Math.max(...maxs)+"°C";
 
   return `<div style="font-size:.72rem;color:var(--o2);font-weight:700;margin-bottom:.6rem;text-transform:uppercase;letter-spacing:1.5px">${fmtDay(wxData.main.daily.time[i],i)}</div>
-  <div style="padding:.65rem .9rem;border-radius:9px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.08);margin-bottom:.4rem">
+  <div style="padding:.65rem .9rem;border-radius:9px;background:rgba(255,255,255,.45);border:1px solid rgba(0,0,0,.12);margin-bottom:.4rem">
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:#4a2000;margin-bottom:.3rem;font-weight:700">Probabilità di pioggia${i===0&&todayProb!==null?" · prossime ore":""}</div>
     <div style="font-size:1.3rem;font-weight:800;color:${probColor}">${prob}%</div>
     <div style="font-size:.78rem;color:${probColor};margin-top:.1rem">${probLabel}</div>
@@ -1181,7 +1229,7 @@ function moveSection(id,dir){
 // ═══════════════════════════════════════════════════════
 let rMap=null,rLayers=[],rFrames=[],rIdx=0,rPlaying=false,rTimer=null;
 let dMap=null,dLayers=[],dFrames=[],dIdx=0,dPlaying=false,dTimer=null;
-let curRadarMode="rv";
+let curRadarMode="windy";
 
 function toggleRadar(){
   const p=document.getElementById("radar-panel");
@@ -1197,7 +1245,11 @@ function toggleRadar(){
       if(curRadarMode==="rv")initRV();
       else if(curRadarMode==="dpc")initDPC();
       else if(curRadarMode==="windy")initWindy();
-    },100);
+      // Scroll al pannello radar tenendo conto dell'header fisso
+      const hh=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--hh"))||200;
+      const y=p.getBoundingClientRect().top+window.pageYOffset-hh-12;
+      window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
+    },120);
   } else {
     stopR();stopD();
   }
