@@ -509,6 +509,49 @@ function azimuthToCardinal(az){
   return dirs[idx];
 }
 
+
+function calcMoonPosition(lat, lon, date){
+  // Algoritmo lunare semplificato (Astronomy on the PC / Montenbruck)
+  const rad=Math.PI/180, deg=180/Math.PI;
+  const JD=(date.getTime()/86400000)+2440587.5;
+  const T=(JD-2451545.0)/36525;
+  // Elementi orbitali lunari (gradi)
+  const L0=218.316+481267.8813*T;                 // longitudine media
+  const M=134.963+477198.8676*T;                  // anomalia media lunare
+  const Ms=357.529+35999.0503*T;                  // anomalia media solare
+  const D=297.850+445267.1115*T;                  // elongazione media
+  const F=93.272+483202.0175*T;                   // argomento latitudine
+  // Longitudine eclittica (termini principali)
+  let lon_ecl=L0
+    +6.289*Math.sin(M*rad)
+    -1.274*Math.sin((2*D-M)*rad)
+    +0.658*Math.sin(2*D*rad)
+    +0.214*Math.sin(2*M*rad)
+    -0.186*Math.sin(Ms*rad)
+    -0.114*Math.sin(2*F*rad);
+  // Latitudine eclittica
+  const lat_ecl=5.128*Math.sin(F*rad)
+    +0.281*Math.sin((M+F)*rad)
+    -0.278*Math.sin((F-M)*rad);
+  // Obliquità eclittica
+  const eps=23.439-0.0000004*T*36525;
+  const lonR=lon_ecl*rad, latR=lat_ecl*rad, epsR=eps*rad;
+  // Da eclittiche a equatoriali
+  const ra=Math.atan2(Math.sin(lonR)*Math.cos(epsR)-Math.tan(latR)*Math.sin(epsR), Math.cos(lonR));
+  const dec=Math.asin(Math.sin(latR)*Math.cos(epsR)+Math.cos(latR)*Math.sin(epsR)*Math.sin(lonR));
+  // Tempo siderale locale
+  const GMST=280.46061837+360.98564736629*(JD-2451545.0);
+  const LST=((GMST+lon)%360)*rad;
+  const H=LST-ra;  // angolo orario
+  const latRad=lat*rad;
+  // Elevazione e azimut
+  const sinAlt=Math.sin(latRad)*Math.sin(dec)+Math.cos(latRad)*Math.cos(dec)*Math.cos(H);
+  const elevation=Math.asin(sinAlt)*deg;
+  let azimuth=Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(latRad)-Math.tan(dec)*Math.cos(latRad))*deg;
+  azimuth=(azimuth+180)%360;  // da Sud a Nord=0
+  return {elevation, azimuth};
+}
+
 function renderAstro(d){
   if(!CUR||!wxData) return "";
   const now=new Date();
@@ -537,6 +580,22 @@ function renderAstro(d){
   const sy=cy-ry*Math.sin(angle);
 
   const cardinal=azimuthToCardinal(sun.azimuth);
+  // Direzione luna (mostrata di notte quando il sole è sotto l'orizzonte)
+  var moonHtml="";
+  if(!isDay){
+    var moon=calcMoonPosition(CUR.lat,CUR.lon,now);
+    if(moon.elevation>0){
+      var mc=azimuthToCardinal(moon.azimuth);
+      var maz=Math.round(moon.azimuth);
+      moonHtml='<div class="sun-dir"><div style="font-size:1.6rem;margin-bottom:.2rem">🌙</div>'
+        +'<div class="sun-deg">'+maz+'°</div>'
+        +'<div class="sun-cardinal">'+mc+'</div>'
+        +'<div class="sun-note">Guardando la luna ora sei rivolto verso <strong style="color:var(--o2)">'+mc+'</strong><br>'
+        +'Elevazione: '+Math.round(moon.elevation)+'° sull\'orizzonte</div></div>';
+    } else {
+      moonHtml='<div style="text-align:center;color:#3a1800;font-size:.9rem;padding:.8rem;font-weight:600">🌙 Sia il sole che la luna sono sotto l\'orizzonte</div>';
+    }
+  }
   const az=Math.round(sun.azimuth);
 
   const sunEmoji=isDay?(sun.elevation>30?"☀️":sun.elevation>10?"🌤️":"🌅"):"🌙";
@@ -579,7 +638,7 @@ function renderAstro(d){
     <div class="sun-cardinal">${cardinal}</div>
     <div class="sun-note">Guardando il sole ora sei rivolto verso <strong style="color:var(--o2)">${cardinal}</strong><br>
     Elevazione: ${Math.round(sun.elevation)}° sull'orizzonte</div>
-  </div>`:`<div style="text-align:center;color:var(--t3);font-size:.85rem;padding:.8rem">🌙 Il sole è sotto l'orizzonte</div>`}`;
+  </div>`:moonHtml}`;
 }
 
 
@@ -883,11 +942,16 @@ function render(){
   updateFavBtn();
   document.getElementById("order-hint").style.display="block";
   document.getElementById("inp").value=CUR.name+(CUR.region?", "+CUR.region:"");
-  // Scroll ai risultati
+  // Scroll ai risultati — tiene conto dell'header fisso
   setTimeout(()=>{
     updateHeaderHeight();
-    document.getElementById("content").scrollIntoView({behavior:"smooth",block:"start"});
-  },100);
+    const el=document.getElementById("content");
+    if(el){
+      const hh=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--hh"))||200;
+      const y=el.getBoundingClientRect().top+window.pageYOffset-hh-12;
+      window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
+    }
+  },150);
   // Scroll all'ora corrente nelle previsioni orarie
   setTimeout(()=>{
     const hs=document.getElementById("hscroll-main");
@@ -968,7 +1032,7 @@ function renderModelsBody(i){
   // Probabilità pioggia — per oggi dalle ore rimanenti, altrimenti dal daily
   const prob=(i===0&&todayProb!==null)?todayProb:(wxData.main.daily.precipitation_probability_max?.[i]||0);
   const probLabel=prob<=10?"Molto bassa":prob<=30?"Bassa":prob<=60?"Moderata":prob<=80?"Alta":"Molto alta";
-  const probColor=prob<=10?"#2ab84a":prob<=30?"#8ab84a":prob<=60?"#f09020":prob<=80?"#e05020":"#b02020";
+  const probColor=prob<=10?"#1a6028":prob<=30?"#4a7010":prob<=60?"#8a4000":prob<=80?"#9a2800":"#7a0000";
 
   // Convergenza quantità mm tra modelli
   const mms=[parseFloat(tm.e.mm),parseFloat(tm.i.mm),parseFloat(tm.g.mm)].filter(x=>!isNaN(x));
