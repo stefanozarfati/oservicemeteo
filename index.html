@@ -580,8 +580,9 @@ function calcSunPosition(lat, lon, date){
 }
 
 function azimuthToCardinal(az){
-  const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
-  const idx=Math.round(az/22.5)%16;
+  // 8 punti cardinali principali
+  const dirs=["N","NE","E","SE","S","SO","O","NO"];
+  const idx=Math.round(az/45)%8;
   return dirs[idx];
 }
 
@@ -769,23 +770,23 @@ function wiUrl(code, isDay){
 // ═══════════════════════════════════════════════════════
 const WX_ICONS = {
 
-  "clear-day": `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="13" fill="#ffb300"/>
-    <g stroke="#ffb300" stroke-width="3.5" stroke-linecap="round">
+  "clear-day": `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="13" fill="#e8a200"/>
+    <g stroke="#b87800" stroke-width="3.5" stroke-linecap="round">
     <line x1="32" y1="6" x2="32" y2="14"/><line x1="32" y1="50" x2="32" y2="58"/>
     <line x1="6" y1="32" x2="14" y2="32"/><line x1="50" y1="32" x2="58" y2="32"/>
     <line x1="13" y1="13" x2="19" y2="19"/><line x1="45" y1="45" x2="51" y2="51"/>
     <line x1="51" y1="13" x2="45" y2="19"/><line x1="19" y1="45" x2="13" y2="51"/></g></svg>`,
 
-  "clear-night": `<svg viewBox="0 0 64 64"><path d="M44 38a18 18 0 1 1-16-26 14 14 0 0 0 16 26z" fill="#ffb300" stroke="#e8a200" stroke-width="1.5"/>
+  "clear-night": `<svg viewBox="0 0 64 64"><path d="M44 38a18 18 0 1 1-16-26 14 14 0 0 0 16 26z" fill="#e8a200" stroke="#b87800" stroke-width="1.5"/>
     <circle cx="48" cy="16" r="1.6" fill="#fff8e6"/><circle cx="40" cy="9" r="1.1" fill="#fff8e6"/><circle cx="53" cy="25" r="1.2" fill="#fff8e6"/></svg>`,
 
-  "partly-day": `<svg viewBox="0 0 64 64"><circle cx="24" cy="22" r="9" fill="#ffb300"/>
-    <g stroke="#ffb300" stroke-width="2.6" stroke-linecap="round">
+  "partly-day": `<svg viewBox="0 0 64 64"><circle cx="24" cy="22" r="9" fill="#e8a200"/>
+    <g stroke="#b87800" stroke-width="2.6" stroke-linecap="round">
     <line x1="24" y1="6" x2="24" y2="10"/><line x1="8" y1="22" x2="12" y2="22"/>
     <line x1="12" y1="10" x2="15" y2="13"/><line x1="36" y1="10" x2="33" y2="13"/></g>
     <path d="M44 52H22a10 10 0 0 1 0-20 13 13 0 0 1 25 3 8 8 0 0 1-3 17z" fill="#e8eef2" stroke="#b8c4cc" stroke-width="1.5"/></svg>`,
 
-  "partly-night": `<svg viewBox="0 0 64 64"><path d="M34 30a11 11 0 1 1-9-16 9 9 0 0 0 9 16z" fill="#ffb300" stroke="#e8a200" stroke-width="1.3"/>
+  "partly-night": `<svg viewBox="0 0 64 64"><path d="M34 30a11 11 0 1 1-9-16 9 9 0 0 0 9 16z" fill="#e8a200" stroke="#b87800" stroke-width="1.3"/>
     <path d="M44 54H22a10 10 0 0 1 0-20 13 13 0 0 1 25 3 8 8 0 0 1-3 17z" fill="#e8eef2" stroke="#b8c4cc" stroke-width="1.5"/></svg>`,
 
   "cloudy": `<svg viewBox="0 0 64 64"><path d="M46 48H20a11 11 0 0 1 0-22 14 14 0 0 1 27 3 9 9 0 0 1-1 19z" fill="#cfd8dd" stroke="#a4b0b8" stroke-width="1.5"/></svg>`,
@@ -1350,9 +1351,7 @@ function toggleRadar(){
   b.classList.toggle("open");
   if(!isOpen){
     setTimeout(()=>{
-      if(curRadarMode==="rv")initRV();
-      else if(curRadarMode==="dpc")initDPC();
-      else if(curRadarMode==="windy")initWindy();
+      switchRadar(curRadarMode); // imposta display corretto + inizializza
       // Scroll al pannello radar tenendo conto dell'header fisso
       const hh=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--hh"))||200;
       const y=p.getBoundingClientRect().top+window.pageYOffset-hh-12;
@@ -1505,7 +1504,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v10";
+    const sw=`const C="osm-v11";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
