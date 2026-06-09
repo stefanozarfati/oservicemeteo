@@ -693,9 +693,9 @@ function renderAstro(d){
       <circle cx="${sx}" cy="${sy}" r="8" fill="#c05000" stroke="white" stroke-width="2"/>
       <text x="${sx}" y="${sy+1}" text-anchor="middle" dominant-baseline="middle" font-size="10">☀</text>`:''}
       <!-- Etichette -->
-      <text x="${cx-rx-2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">E</text>
-      <text x="${cx}" y="${cy-ry-10}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">S</text>
-      <text x="${cx+rx+2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">O</text>
+      <text x="${cx-rx-2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">${lblLeft}</text>
+      <text x="${cx}" y="${cy-ry-10}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">${lblTop}</text>
+      <text x="${cx+rx+2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">${lblRight}</text>
       <!-- Linea orizzonte -->
       <line x1="${cx-rx-15}" y1="${cy}" x2="${cx+rx+15}" y2="${cy}" stroke="rgba(80,30,0,.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
       <defs>
