@@ -238,6 +238,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .sun-info{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.92rem;color:#3a1800;font-weight:600}
 .sun-dir{text-align:center;margin-top:.6rem}
 .sun-deg{font-size:2.8rem;font-weight:800;color:#8a2800;line-height:1}
+.sun-az{font-size:.72rem;font-weight:700;color:#7a4a20;letter-spacing:1px;text-transform:uppercase;opacity:.85;margin-bottom:.1rem}
 .sun-cardinal{font-size:1.4rem;color:#3a1800;margin-top:.2rem;font-weight:800;letter-spacing:2px}
 .sun-note{font-size:1.05rem;color:#3a1800;margin-top:.4rem;line-height:1.6;font-weight:600}
 
@@ -683,6 +684,7 @@ function renderAstro(d){
       var mc=azimuthToCardinal(moon.azimuth);
       var maz=Math.round(moon.azimuth);
       moonHtml='<div class="sun-dir"><div style="font-size:1.6rem;margin-bottom:.2rem">🌙</div>'
+        +'<div class="sun-az">Azimut (da Nord)</div>'
         +'<div class="sun-deg">'+maz+'°</div>'
         +'<div class="sun-cardinal">'+mc+'</div>'
         +'<div class="sun-note">Se guardi la Luna da <strong style="color:var(--o2)">'+(CUR.name||"").split(",")[0]+'</strong> sei rivolto verso <strong style="color:var(--o2)">'+mc+'</strong><br>'
@@ -744,6 +746,7 @@ function renderAstro(d){
   </div>
   ${isDay?`
   <div class="sun-dir">
+    <div class="sun-az">Azimut (da Nord)</div>
     <div class="sun-deg">${az}°</div>
     <div class="sun-cardinal">${cardinal}</div>
     <div class="sun-note">Se guardi il Sole da <strong style="color:var(--o2)">${(CUR.name||"").split(",")[0]}</strong> sei rivolto verso <strong style="color:var(--o2)">${cardinal}</strong><br>
@@ -1521,7 +1524,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v15";
+    const sw=`const C="osm-v16";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
