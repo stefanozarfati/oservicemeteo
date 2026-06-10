@@ -582,9 +582,9 @@ function calcSunPosition(lat, lon, date){
 }
 
 function azimuthToCardinal(az){
-  // 8 punti cardinali principali
-  const dirs=["N","NE","E","SE","S","SO","O","NO"];
-  const idx=Math.round(az/45)%8;
+  // 16 punti cardinali (convenzione italiana: O = Ovest)
+  const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
+  const idx=Math.round((((az%360)+360)%360)/22.5)%16;
   return dirs[idx];
 }
 
@@ -700,6 +700,13 @@ function renderAstro(d){
   const locTime=String(ln.getUTCHours()).padStart(2,"0")+":"+String(ln.getUTCMinutes()).padStart(2,"0");
   const cityShort=(CUR.name||"").split(",")[0];
 
+  // Riga Alba/Tramonto: a sud (culmina a Nord) l'alba è a destra (Est) e il tramonto
+  // a sinistra (Ovest), quindi i due blocchi vanno scambiati per seguire l'arco già specchiato.
+  const albaInfo=`<i class="fa-solid fa-sun" style="color:#F07020"></i> ${fmtT(d.sunrise[0])}<br><small style="color:var(--t3)">Alba</small>`;
+  const tramontoInfo=`<i class="fa-solid fa-moon" style="color:#a0a0c0"></i> ${fmtT(d.sunset[0])}<br><small style="color:var(--t3)">Tramonto</small>`;
+  const infoLeft=culminatesNorth?tramontoInfo:albaInfo;
+  const infoRight=culminatesNorth?albaInfo:tramontoInfo;
+
   return `
   <div class="sun-arc-wrap">
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
@@ -727,9 +734,9 @@ function renderAstro(d){
       </defs>
     </svg>
     <div class="sun-info">
-      <span><i class="fa-solid fa-sun" style="color:#F07020"></i> ${fmtT(d.sunrise[0])}<br><small style="color:var(--t3)">Alba</small></span>
+      <span>${infoLeft}</span>
       <span style="text-align:center">${sunEmoji}<br><small style="color:var(--t3)">${hLight}h ${mLight}m di luce</small></span>
-      <span style="text-align:right"><i class="fa-solid fa-moon" style="color:#a0a0c0"></i> ${fmtT(d.sunset[0])}<br><small style="color:var(--t3)">Tramonto</small></span>
+      <span style="text-align:right">${infoRight}</span>
     </div>
   </div>
   <div class="sun-localtime" style="text-align:center;font-size:.82rem;color:var(--t3);margin:.2rem 0 .5rem">
@@ -1514,7 +1521,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v14";
+    const sw=`const C="osm-v15";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
