@@ -563,11 +563,13 @@ function calcSunPosition(lat, lon, date){
   const y=Math.tan(e/2)**2;
   const LL=L0*rad, MM=M;
   const eot=4*deg*(y*Math.sin(2*LL)-2*0.016708634*Math.sin(MM)+4*0.016708634*y*Math.sin(MM)*Math.cos(2*LL)-0.5*y*y*Math.sin(4*LL)-1.25*0.016708634**2*Math.sin(2*MM));
-  // Ora solare vera
-  const tzOffset=date.getTimezoneOffset();
-  const solarNoonMin=720-lon*4-eot-tzOffset; // minuti dalla mezzanotte locale
-  const minutesNow=date.getHours()*60+date.getMinutes()+date.getSeconds()/60;
-  const hourAngle=(minutesNow-solarNoonMin)*0.25*rad; // 0.25 = 360/1440
+  // Ora solare vera — TUTTO in UTC: la posizione del Sole dipende solo
+  // dall'istante reale (UTC) e da lat/lon, NON dal fuso del dispositivo.
+  const solarNoonMin=720-lon*4-eot; // mezzogiorno solare in minuti UTC
+  const minutesNow=date.getUTCHours()*60+date.getUTCMinutes()+date.getUTCSeconds()/60;
+  let dMin=minutesNow-solarNoonMin;
+  dMin=((dMin%1440)+1440)%1440; if(dMin>720) dMin-=1440; // normalizza a -720..720 min (-180..180°)
+  const hourAngle=dMin*0.25*rad; // 0.25 = 360/1440
   // Elevazione
   const latRad=lat*rad;
   const sinAlt=Math.sin(latRad)*Math.sin(decl)+Math.cos(latRad)*Math.cos(decl)*Math.cos(hourAngle);
@@ -657,20 +659,20 @@ function renderAstro(d){
   // Posizione sole sull'arco SVG
   // Determina verso quale punto cardinale culmina il sole (Sud in emisfero nord, Nord in emisfero sud)
   // Si basa sull'azimut reale a mezzogiorno: vicino a 180=Sud, vicino a 0/360=Nord
-  var sunAz=sun.azimuth;
-  // L'osservatore guarda verso la culminazione: Sud se azimut nell'arco 90-270, altrimenti Nord
-  // Usiamo la latitudine e la declinazione per decidere il polo di culminazione
-  var culminatesNorth=(CUR.lat<sun.decl); // se la latitudine è sotto la declinazione, il sole culmina a Nord
+  // Polo di culminazione: Nord se la latitudine è sotto la declinazione (emisfero sud / tropici)
+  var culminatesNorth=(CUR.lat<sun.decl);
   const W=320, H=180, cx=W/2, cy=H-10, rx=cx-20, ry=H-30;
   const angle=Math.PI*(1-prog); // π=alba, 0=tramonto
-  // Emisfero nord (culmina a Sud): alba a sinistra(Est), tramonto a destra(Ovest)
-  // Emisfero sud (culmina a Nord): specchiato — alba a destra(Est), tramonto a sinistra(Ovest)
+  // Mirroring geografico (osservatore rivolto verso la culminazione):
+  //  emisfero NORD (culmina a Sud): alba a SINISTRA (Est), tramonto a DESTRA (Ovest), Sole sx→dx
+  //  emisfero SUD  (culmina a Nord): alba a DESTRA  (Est), tramonto a SINISTRA (Ovest), Sole dx→sx
   const sx=culminatesNorth ? (cx-rx*Math.cos(angle)) : (cx+rx*Math.cos(angle));
   const sy=cy-ry*Math.sin(angle);
-  // Etichette adattate all'emisfero
-  const lblTop=culminatesNorth?"N":"S";
-  const lblLeft=culminatesNorth?"O":"E";
-  const lblRight=culminatesNorth?"E":"O";
+  const sunriseX=culminatesNorth ? (cx+rx) : (cx-rx); // estremo dell'alba (inizio del tratto giallo)
+  const sweep=culminatesNorth ? 0 : 1;               // verso dell'arco percorso
+  const lblTop=culminatesNorth?"N":"S";              // dove culmina il Sole
+  const lblLeft=culminatesNorth?"O":"E";             // sud: Ovest a sinistra
+  const lblRight=culminatesNorth?"E":"O";            // sud: Est a destra
 
   const cardinal=azimuthToCardinal(sun.azimuth);
   // Direzione luna (mostrata di notte quando il sole è sotto l'orizzonte)
@@ -693,18 +695,23 @@ function renderAstro(d){
 
   const sunEmoji=isDay?(sun.elevation>30?"☀️":sun.elevation>10?"🌤️":"🌅"):"🌙";
 
+  // Ora locale della località (da utc_offset_seconds via locNow, letta in UTC)
+  const ln=locNow();
+  const locTime=String(ln.getUTCHours()).padStart(2,"0")+":"+String(ln.getUTCMinutes()).padStart(2,"0");
+  const cityShort=(CUR.name||"").split(",")[0];
+
   return `
   <div class="sun-arc-wrap">
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
       <!-- Arco del sole -->
       <path d="M ${cx+rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx-rx} ${cy}"
         fill="none" stroke="rgba(80,30,0,.3)" stroke-width="6" stroke-linecap="round"/>
-      <!-- Parte percorsa -->
-      ${isDay?`<path d="M ${culminatesNorth?(cx-rx):(cx+rx)} ${cy} A ${rx} ${ry} 0 0 ${culminatesNorth?1:0} ${sx} ${sy}"
-        fill="none" stroke="#c05000" stroke-width="6.5" stroke-linecap="round"/>
+      <!-- Parte percorsa (dall'alba fino al Sole) in giallo -->
+      ${isDay?`<path d="M ${sunriseX} ${cy} A ${rx} ${ry} 0 0 ${sweep} ${sx} ${sy}"
+        fill="none" stroke="#ffcf3f" stroke-width="6.5" stroke-linecap="round"/>
       <!-- Sole attuale -->
-      <circle cx="${sx}" cy="${sy}" r="14" fill="#c05000" opacity=".2"/>
-      <circle cx="${sx}" cy="${sy}" r="8" fill="#c05000" stroke="white" stroke-width="2"/>
+      <circle cx="${sx}" cy="${sy}" r="14" fill="#ffcf3f" opacity=".25"/>
+      <circle cx="${sx}" cy="${sy}" r="8" fill="#ffcf3f" stroke="#e06010" stroke-width="2"/>
       <text x="${sx}" y="${sy+1}" text-anchor="middle" dominant-baseline="middle" font-size="10">☀</text>`:''}
       <!-- Etichette -->
       <text x="${cx-rx-2}" y="${cy+18}" text-anchor="middle" font-size="15" fill="#3d1500" font-weight="bold">${lblLeft}</text>
@@ -724,6 +731,9 @@ function renderAstro(d){
       <span style="text-align:center">${sunEmoji}<br><small style="color:var(--t3)">${hLight}h ${mLight}m di luce</small></span>
       <span style="text-align:right"><i class="fa-solid fa-moon" style="color:#a0a0c0"></i> ${fmtT(d.sunset[0])}<br><small style="color:var(--t3)">Tramonto</small></span>
     </div>
+  </div>
+  <div class="sun-localtime" style="text-align:center;font-size:.82rem;color:var(--t3);margin:.2rem 0 .5rem">
+    <i class="fa-regular fa-clock"></i> Ora locale a <strong style="color:var(--o2)">${cityShort}</strong>: <strong>${locTime}</strong>
   </div>
   ${isDay?`
   <div class="sun-dir">
@@ -1504,7 +1514,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v11";
+    const sw=`const C="osm-v14";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
