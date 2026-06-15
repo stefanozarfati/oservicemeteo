@@ -701,7 +701,7 @@ function renderAstro(d){
 
   return `
   <div class="sun-arc-wrap">
-    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 ${W} ${H+22}" xmlns="http://www.w3.org/2000/svg">
       <!-- Arco del sole -->
       <path d="M ${cx+rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx-rx} ${cy}"
         fill="none" stroke="rgba(80,30,0,.3)" stroke-width="6" stroke-linecap="round"/>
@@ -1148,7 +1148,7 @@ function renderCurrentBody(cur,d){
     <div class="di"><i class="fa-icon fa-solid fa-cloud-rain di-icon"></i><div class="dl">Precip.</div><div class="dv"><span class="dot" style="background:${pCol(d.precipitation_sum[0])}"></span>${d.precipitation_sum[0]>0?parseFloat(d.precipitation_sum[0]).toFixed(1)+"mm":"Assenti"}</div></div>
     <div class="di"><i class="fa-icon fa-solid fa-radiation di-icon"></i><div class="dl">UV max</div><div class="dv">${d.uv_index_max[0]} — ${uvL(d.uv_index_max[0])}</div></div>
     <div class="di"><i class="fa-icon fa-solid fa-eye di-icon"></i><div class="dl">Visibilità</div><div class="dv">${vis}</div></div>
-    <div class="di"><i class="fa-icon fa-solid fa-circle-half-stroke di-icon"></i><div class="dl">Alba/Tramonto</div><div class="dv" style="font-size:.82rem;color:#e8e8e8">${fmtT(d.sunrise[0])} / ${fmtT(d.sunset[0])}</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-circle-half-stroke di-icon"></i><div class="dl">Alba/Tramonto</div><div class="dv" style="font-size:.82rem">${fmtT(d.sunrise[0])} / ${fmtT(d.sunset[0])}</div></div>
   </div>`;
 }
 
@@ -1513,7 +1513,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v18";
+    const sw=`const C="osm-v19";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
