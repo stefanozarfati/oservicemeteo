@@ -1215,6 +1215,21 @@ function toggleAlertDetail(e){
 }
 
 
+// Il pannello sole/luna è calcolato per "adesso": va aggiornato nel tempo,
+// altrimenti resta congelato all'istante in cui si è caricata la località.
+let astroTimer=null;
+function refreshAstro(){
+  if(!CUR||!wxData||!wxData.main||!wxData.main.daily) return;
+  const el=document.getElementById("astro-body");
+  if(el) el.innerHTML=renderAstro(wxData.main.daily);
+}
+function startAstroRefresh(){
+  if(astroTimer) return;                       // evita timer duplicati a ogni render
+  astroTimer=setInterval(refreshAstro,60000);  // ogni minuto
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshAstro(); });
+  window.addEventListener("focus",refreshAstro);
+}
+
 // ═══════════════════════════════════════════════════════
 //  RENDER
 // ═══════════════════════════════════════════════════════
@@ -1245,7 +1260,7 @@ function render(){
     {id:"sec-current",label:'<i class="fa-icon fa-solid fa-cloud-sun"></i> Condizioni attuali',tag:'<span class="tag tag-om">LIVE</span>',body:renderCurrentBody(cur,d)},
     {id:"sec-models",label:'<i class="fa-icon fa-solid fa-sliders"></i> Confronto modelli',body:renderModelsBody(selDay)},
     {id:"sec-advice",label:'<i class="fa-icon fa-solid fa-person-hiking"></i> Consiglio outdoor',body:renderAdviceBody(cur,d,0)},
-    {id:"sec-astro",label:'<i class="fa-icon fa-solid fa-sun"></i> Astronomia',body:renderAstro(d)}
+    {id:"sec-astro",label:'<i class="fa-icon fa-solid fa-sun"></i> Astronomia',body:'<div id="astro-body">'+renderAstro(d)+'</div>'}
   ];
   // Ripristina ordine salvato
   const saved=JSON.parse(localStorage.getItem(ORD_KEY)||"null");
@@ -1266,6 +1281,7 @@ function render(){
   document.getElementById("content").insertAdjacentHTML("beforeend",`<div style="font-size:.7rem;color:var(--t3);text-align:center;margin-top:.3rem">Dati: Open-Meteo · ECMWF · ICON-D2 · GFS · Aggiornamento orario</div>`);
   updateFavBtn();
   document.getElementById("order-hint").style.display="block";
+  startAstroRefresh();
   document.getElementById("inp").value=CUR.name+(CUR.region?", "+CUR.region:"");updateClearBtn();
   // Scroll ai risultati — tiene conto dell'header fisso
   setTimeout(()=>{
@@ -1675,7 +1691,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v29";
+    const sw=`const C="osm-v30";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
