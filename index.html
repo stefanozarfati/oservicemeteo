@@ -927,41 +927,69 @@ function togFav(){if(!CUR)return;ST.togF(CUR);updateFavBtn();if(document.getElem
 const EXONYMS={"candia":"Heraklion","la canea":"Chania","canea":"Chania","rettimo":"Rethymno","retimo":"Rethymno","lepanto":"Nafpaktos","negroponte":"Chalkida","atene":"Athens","salonicco":"Thessaloniki","patrasso":"Patras","corfu":"Corfu","corfù":"Corfu","zante":"Zakynthos","egina":"Aegina","rodi":"Rhodes","nasso":"Naxos","smirne":"Izmir","il cairo":"Cairo","monaco di baviera":"Munich","aquisgrana":"Aachen","ratisbona":"Regensburg"};
 function aliasOf(q){return EXONYMS[(q||"").trim().toLowerCase().replace(/\s+/g," ")]||null;}
 
+// Prefissi generici oro/idronimici: se l'utente scrive "Monte Livata" ma il dato è "Livata"
+// (o viceversa) proviamo entrambe le forme. Risolve il caso senza dizionari ad hoc.
+const GEN_PREFIX=/^(monte|monti|colle|colli|poggio|pizzo|cima|punta|corno|sasso|rocca|costa|capo|passo|forca|sella|bocca|bocchetta|lago|laghi|laghetto|valle|vallone|val|alpe|alpi|rifugio|croda)\s+/i;
+function expandQueries(q){
+  const out=[],push=s=>{s=(s||"").trim();if(s&&!out.some(x=>x.toLowerCase()===s.toLowerCase()))out.push(s);};
+  push(q);
+  const al=aliasOf(q); if(al)push(al);              // esonimo prioritario (es. Candia→Heraklion)
+  const m=q.match(GEN_PREFIX);
+  if(m)push(q.slice(m[0].length));                  // "Monte Livata" → "Livata"
+  else push("Monte "+q);                            // "Livata" → "Monte Livata"
+  return out;
+}
+
+// Photon (komoot) — geocoder OSM keyless, tollerante ai refusi, multi-parola, italiano.
+// Miglior copertura per montagne/frazioni/esonimi rispetto a Open-Meteo. CORS abilitato.
+async function photonSearch(q,limit){
+  try{
+    const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=it&limit=${limit||8}`);
+    const d=await r.json();
+    return (d.features||[]).map(f=>{
+      const p=f.properties||{}, c=(f.geometry||{}).coordinates||[];
+      const name=p.name||p.city||p.street||"";
+      const det=[(p.city&&p.city!==name)?p.city:null,p.county,p.state,p.country].filter(Boolean).join(", ");
+      const isNat=p.osm_key==="natural"||["peak","hill","volcano"].includes(p.osm_value);
+      const isPlace=p.osm_key==="place"||["city","town","village","hamlet","locality","municipality"].includes(p.type);
+      const pri=isNat?-1:(isPlace?0:1);             // vette e località in cima alla lista, indirizzi sotto
+      return {lat:c[1],lon:c[0],name,det,region:det,pri};
+    }).filter(x=>x.name&&x.lat!=null&&x.lon!=null);
+  }catch(e){return[];}
+}
+
 async function geocode(q){
   const results=[],seen=new Set();
-  const queries=[q];
-  const _al=aliasOf(q); if(_al)queries.push(_al);
-  const lq=q.toLowerCase();
-  if(!lq.startsWith("monte ")&&!lq.startsWith("colle ")&&!lq.startsWith("lago "))
-    queries.push("Monte "+q);
-  for(const query of queries){
-    if(results.length>=8)break;
-    // Open-Meteo
+  const add=it=>{if(it.lat==null||it.lon==null||isNaN(it.lat)||isNaN(it.lon))return;
+    const k=`${(+it.lat).toFixed(2)},${(+it.lon).toFixed(2)}`;
+    if(!seen.has(k)){seen.add(k);results.push(it);}};
+  const queries=expandQueries(q);
+  // 1) Photon: miglior copertura (montagne, frazioni, esonimi, refusi, multi-parola)
+  for(const query of queries){ if(results.length>=12)break; (await photonSearch(query,8)).forEach(add); }
+  // 2) Open-Meteo: città pulite + nomi alternativi GeoNames
+  for(const query of queries){ if(results.length>=12)break;
     try{
       const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=it&format=json`);
       const d=await r.json();
-      (d.results||[]).forEach(p=>{
-        const k=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
-        if(!seen.has(k)){seen.add(k);results.push({lat:p.latitude,lon:p.longitude,name:p.name,region:[p.admin2,p.admin1,p.country].filter(Boolean).join(", ")});}
-      });
+      (d.results||[]).forEach(p=>add({lat:p.latitude,lon:p.longitude,name:p.name,region:[p.admin2,p.admin1,p.country].filter(Boolean).join(", "),pri:0}));
     }catch(e){}
-    // Nominatim fallback
-    if(results.length<3){
+  }
+  // 3) Nominatim: ultima rete di sicurezza se ancora pochi risultati
+  if(results.length<3){
+    for(const query of queries){ if(results.length>=8)break;
       try{
         const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&accept-language=it&addressdetails=1&namedetails=1`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
         const d2=await r2.json();
         d2.filter(x=>!["highway","road","path","footway","bus_stop"].includes(x.type)&&!x.display_name?.toLowerCase().startsWith("via "))
           .forEach(p=>{
-          const k=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
-          if(!seen.has(k)){seen.add(k);
             const addr=p.address||{};
             const name=p.namedetails?.name||addr.village||addr.hamlet||addr.town||addr.city||p.display_name.split(",")[0];
-            results.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,region:[addr.city||addr.town||addr.village,addr.county,addr.state].filter(Boolean).join(", ")});
-          }
-        });
+            add({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,region:[addr.city||addr.town||addr.village,addr.county,addr.state].filter(Boolean).join(", "),pri:0});
+          });
       }catch(e){}
     }
   }
+  results.sort((a,b)=>(a.pri||0)-(b.pri||0));
   return results;
 }
 
@@ -979,40 +1007,23 @@ document.addEventListener("DOMContentLoaded",function(){
     acTimer=setTimeout(async function(){
       try{
         const seen=new Set(),items=[];
-        // Open-Meteo
-        try{
-          const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=10&language=it&format=json`);
-          const d=await r.json();
-          (d.results||[]).forEach(p=>{
-            const k=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;
-            if(!seen.has(k)){seen.add(k);const det=[p.admin2,p.admin1,p.country].filter(Boolean).join(", ");items.push({lat:p.latitude,lon:p.longitude,name:p.name,det,pri:0});}
-          });
-        }catch(e){}
-        const _al=aliasOf(v);
-        if(_al){try{
-          const ra=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(_al)}&count=5&language=it&format=json`);
-          const da=await ra.json();
-          (da.results||[]).forEach(p=>{const k=`${p.latitude.toFixed(2)},${p.longitude.toFixed(2)}`;if(!seen.has(k)){seen.add(k);const det=[p.admin2,p.admin1,p.country].filter(Boolean).join(", ");items.push({lat:p.latitude,lon:p.longitude,name:p.name,det,pri:0});}});
-        }catch(e){}}
-        // Nominatim
-        if(items.length<4){
-          try{
-            const r2=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&format=json&limit=8&accept-language=it&addressdetails=1&namedetails=1`,{headers:{"User-Agent":"OServiceMeteo/1.0"}});
-            const d2=await r2.json();
-            d2.filter(x=>!["highway","road","path","footway","bus_stop"].includes(x.type)&&!x.display_name?.toLowerCase().startsWith("via "))
-              .forEach(p=>{
-              const k=`${parseFloat(p.lat).toFixed(2)},${parseFloat(p.lon).toFixed(2)}`;
-              if(!seen.has(k)){seen.add(k);
-                const addr=p.address||{};
-                const name=p.namedetails?.name||addr.village||addr.hamlet||addr.town||addr.city||p.display_name.split(",")[0];
-                const det=[addr.city||addr.town||addr.village,addr.county,addr.state].filter(Boolean).join(", ");
-                const pri=(p.type==="peak"||p.type==="hill"||p.class==="natural")?-1:0;
-                items.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),name,det,pri});
-              }
-            });
-          }catch(e){}
+        const add=it=>{if(it.lat==null||it.lon==null||isNaN(it.lat)||isNaN(it.lon))return;
+          const k=`${(+it.lat).toFixed(2)},${(+it.lon).toFixed(2)}`;
+          if(!seen.has(k)){seen.add(k);items.push(it);}};
+        const queries=expandQueries(v);
+        // Photon primario: search-as-you-type, refusi, multi-parola, italiano
+        for(const q of queries){ if(items.length>=10)break; (await photonSearch(q,8)).forEach(add); }
+        // Open-Meteo a completamento per le città principali
+        if(items.length<6){
+          for(const q of queries){ if(items.length>=10)break;
+            try{
+              const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=it&format=json`);
+              const d=await r.json();
+              (d.results||[]).forEach(p=>add({lat:p.latitude,lon:p.longitude,name:p.name,det:[p.admin2,p.admin1,p.country].filter(Boolean).join(", "),pri:0}));
+            }catch(e){}
+          }
         }
-        items.sort((a,b)=>a.pri-b.pri);
+        items.sort((a,b)=>(a.pri||0)-(b.pri||0));
         if(!items.length){sug.classList.remove("open");return;}
         sug.innerHTML=items.slice(0,6).map(p=>`<div class="si" onclick="selSug(${p.lat},${p.lon},'${escJ(p.name)}','${escJ(p.det||"")}')"><div class="sn">${escH(p.name)}</div>${p.det?`<div class="sd">${escH(p.det)}</div>`:""}</div>`).join("");
         sug.classList.add("open");
@@ -1524,11 +1535,11 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v20";
+    const sw=`const C="osm-v21";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
-  if(e.request.url.includes("open-meteo.com")||e.request.url.includes("nominatim")||e.request.url.includes("rainviewer")||e.request.url.includes("fonts.gstatic")){
+  if(e.request.url.includes("open-meteo.com")||e.request.url.includes("nominatim")||e.request.url.includes("photon.komoot")||e.request.url.includes("rainviewer")||e.request.url.includes("fonts.gstatic")){
     e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));return;
   }
   e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
