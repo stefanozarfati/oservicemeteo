@@ -964,6 +964,9 @@ async function geocode(q){
     const k=`${(+it.lat).toFixed(2)},${(+it.lon).toFixed(2)}`;
     if(!seen.has(k)){seen.add(k);results.push(it);}};
   const queries=expandQueries(q);
+  // Esonimo prioritario: query SEMPRE eseguita e fissata in cima
+  const _al=aliasOf(q);
+  if(_al){ (await photonSearch(_al,5)).forEach(it=>{it.pri=-2;add(it);}); }
   // 1) Photon: miglior copertura (montagne, frazioni, esonimi, refusi, multi-parola)
   for(const query of queries){ if(results.length>=12)break; (await photonSearch(query,8)).forEach(add); }
   // 2) Open-Meteo: città pulite + nomi alternativi GeoNames
@@ -1011,6 +1014,9 @@ document.addEventListener("DOMContentLoaded",function(){
           const k=`${(+it.lat).toFixed(2)},${(+it.lon).toFixed(2)}`;
           if(!seen.has(k)){seen.add(k);items.push(it);}};
         const queries=expandQueries(v);
+        // Esonimo (es. Candia→Heraklion): query SEMPRE eseguita e fissata in cima.
+        const _al=aliasOf(v);
+        if(_al){ (await photonSearch(_al,5)).forEach(it=>{it.pri=-2;add(it);}); }
         // Photon primario: search-as-you-type, refusi, multi-parola, italiano
         for(const q of queries){ if(items.length>=10)break; (await photonSearch(q,8)).forEach(add); }
         // Open-Meteo a completamento per le città principali
@@ -1535,7 +1541,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v21";
+    const sw=`const C="osm-v22";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
