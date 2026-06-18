@@ -1167,16 +1167,16 @@ function computeAlerts(i){
   const tCold=d.apparent_temperature_min&&d.apparent_temperature_min[i];
   const items=[]; let lvl=0;
   const push=(level,icon,text)=>{items.push({level,icon,text}); lvl=Math.max(lvl,level);};
-  if(gust>=100) push(3,"💨","Vento forte: raffiche fino a "+Math.round(gust)+" km/h");
-  else if(gust>=75) push(2,"💨","Vento: raffiche fino a "+Math.round(gust)+" km/h");
-  else if(gust>=50) push(1,"💨","Vento: raffiche fino a "+Math.round(gust)+" km/h");
-  if(rain>=30) push(2,"🌧️","Pioggia intensa: fino a "+rain.toFixed(1)+" mm/h");
-  else if(rain>=10) push(1,"🌧️","Pioggia forte: fino a "+rain.toFixed(1)+" mm/h");
-  if(snow>=5) push(2,"❄️","Neve abbondante: fino a "+snow.toFixed(1)+" cm/h");
-  else if(snow>=1) push(1,"❄️","Neve prevista: fino a "+snow.toFixed(1)+" cm/h");
+  if(gust>=105) push(3,"💨","Vento forte: raffiche fino a "+Math.round(gust)+" km/h");
+  else if(gust>=80) push(2,"💨","Vento: raffiche fino a "+Math.round(gust)+" km/h");
+  else if(gust>=60) push(1,"💨","Vento: raffiche fino a "+Math.round(gust)+" km/h");
+  if(rain>=35) push(2,"🌧️","Pioggia intensa: fino a "+rain.toFixed(1)+" mm/h");
+  else if(rain>=15) push(1,"🌧️","Pioggia forte: fino a "+rain.toFixed(1)+" mm/h");
+  if(snow>=6) push(2,"❄️","Neve abbondante: fino a "+snow.toFixed(1)+" cm/h");
+  else if(snow>=2) push(1,"❄️","Neve prevista: fino a "+snow.toFixed(1)+" cm/h");
   if(hail) push(2,"🧊","Possibile grandine (temporali)");
-  if(tHot!=null){ if(tHot>=38) push(2,"🌡️","Caldo intenso: percepiti "+Math.round(tHot)+"°C"); else if(tHot>=35) push(1,"🌡️","Caldo: percepiti "+Math.round(tHot)+"°C"); }
-  if(tCold!=null){ if(tCold<=-10) push(2,"🥶","Freddo intenso: percepiti "+Math.round(tCold)+"°C"); else if(tCold<=-5) push(1,"🥶","Freddo: percepiti "+Math.round(tCold)+"°C"); }
+  if(tHot!=null){ if(tHot>=42) push(2,"🌡️","Caldo intenso: percepiti "+Math.round(tHot)+"°C"); else if(tHot>=38) push(1,"🌡️","Caldo: percepiti "+Math.round(tHot)+"°C"); }
+  if(tCold!=null){ if(tCold<=-13) push(2,"🥶","Freddo intenso: percepiti "+Math.round(tCold)+"°C"); else if(tCold<=-8) push(1,"🥶","Freddo: percepiti "+Math.round(tCold)+"°C"); }
   return {level:lvl,items};
 }
 function alertLinksHtml(){
@@ -1675,7 +1675,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v28";
+    const sw=`const C="osm-v29";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
