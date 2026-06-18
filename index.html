@@ -54,12 +54,22 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .sug{background:rgba(255,255,255,.92);border:2px solid var(--bd);border-radius:12px;
   margin-bottom:.8rem;max-height:60vh;overflow-y:auto;overflow-x:hidden;display:none;box-shadow:0 4px 20px rgba(0,0,0,.4)}
 .sug.open{display:block}
-.wx-alert{border-radius:16px;padding:.85rem 1rem;margin:.2rem 0 .8rem;border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 18px rgba(0,0,0,.3)}
-.wx-alert .al-head{font-weight:800;font-size:1rem;margin-bottom:.35rem}
-.wx-alert.al-ok{background:rgba(33,120,60,.5);color:#eafff0}
-.wx-alert.al-g{background:rgba(225,170,0,.66);color:#322100}
-.wx-alert.al-a{background:rgba(214,95,0,.74);color:#fff}
-.wx-alert.al-r{background:rgba(176,20,20,.80);color:#fff}
+.al-toggle{display:inline-flex;align-items:center;font-size:.7rem;font-weight:800;padding:.14rem .55rem;border-radius:999px;cursor:pointer;vertical-align:middle;margin-left:.3rem;white-space:nowrap}
+.al-tri{margin-right:.22rem;flex:0 0 auto}
+.al-toggle.lvl0{background:rgba(255,255,255,.18);color:rgba(255,255,255,.7)}
+.al-toggle.lvl1{background:#e8b000;color:#322100}
+.al-toggle.lvl2{background:#e6790f;color:#fff}
+.al-toggle.lvl3{background:#e23b3b;color:#fff;animation:alpulse 1.6s infinite}
+@keyframes alpulse{0%,100%{opacity:1}50%{opacity:.55}}
+.fcd{position:relative}
+.fcalert{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 1.5px rgba(255,255,255,.85)}
+.fcalert.lvl1{background:#e8b000}.fcalert.lvl2{background:#e6790f}.fcalert.lvl3{background:#e23b3b}
+.al-detail{margin-top:.7rem;border-radius:14px;padding:.75rem .9rem;border:1px solid rgba(255,255,255,.4)}
+.al-detail.al-ok{background:rgba(33,120,60,.5);color:#eafff0}
+.al-detail.al-g{background:rgba(225,170,0,.66);color:#322100}
+.al-detail.al-a{background:rgba(214,95,0,.74);color:#fff}
+.al-detail.al-r{background:rgba(176,20,20,.80);color:#fff}
+.al-head{font-weight:800;font-size:1rem;margin-bottom:.35rem}
 .al-list{list-style:none;margin:.15rem 0 .5rem;padding:0;display:flex;flex-direction:column;gap:.28rem}
 .al-i{font-weight:600;font-size:.92rem}
 .al-okmsg{font-size:.88rem;opacity:.95;margin-bottom:.45rem}
@@ -1176,19 +1186,32 @@ function alertLinksHtml(){
   if(iso==="IT") l+='<a class="al-link" href="https://mappe.protezionecivile.gov.it/it/mappe-rischi/bollettino-di-criticita/" target="_blank" rel="noopener">🇮🇹 Protezione Civile</a>';
   return l;
 }
-function renderAlertBanner(){
+function renderAlertDetail(){
   if(!wxData) return "";
   const a=computeAlerts(selDay), dayLbl=fmtDay(wxData.main.daily.time[selDay],selDay);
-  const cls=a.level>=3?"al-r":a.level>=2?"al-a":a.level>=1?"al-g":"al-ok";
-  const head=a.level>=1?("⚠️ Allerta meteo · "+dayLbl):("✅ Nessuna allerta · "+dayLbl);
+  const head=a.level>=1?('<svg class="al-tri" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2.5 22.6 21H1.4L12 2.5Z M11 9h2v6h-2z M11 16.3h2v2h-2z"/></svg> Allerta meteo · '+dayLbl):("Nessuna allerta · "+dayLbl);
   const body=a.level>=1
     ? '<ul class="al-list">'+a.items.map(it=>'<li class="al-i">'+it.icon+" "+escH(it.text)+'</li>').join("")+'</ul>'
-    : '<div class="al-okmsg">Nessun fenomeno oltre le soglie nei dati previsti.</div>';
-  return '<div class="wx-alert '+cls+'" id="wx-alert">'
-    +'<div class="al-head">'+head+'</div>'+body
+    : '<div class="al-okmsg">Nessun fenomeno oltre le soglie nei dati previsti per questo giorno.</div>';
+  return '<div class="al-head">'+head+'</div>'+body
     +'<div class="al-links">'+alertLinksHtml()+'</div>'
-    +'<div class="al-note">Allerta calcolata dai dati previsti (soglie indicative, non ufficiali). Le allerte ufficiali e verificate sono quelle degli enti qui sopra.</div>'
-    +'</div>';
+    +'<div class="al-note">Stima dai dati previsti (soglie indicative, non ufficiali). Le allerte ufficiali e verificate sono quelle degli enti qui sopra.</div>';
+}
+function alDetailLevelClass(){
+  const lv=wxData?computeAlerts(selDay).level:0;
+  return lv>=3?"al-r":lv>=2?"al-a":lv>=1?"al-g":"al-ok";
+}
+function toggleAlertDetail(e){
+  if(e){e.stopPropagation();}
+  const p=document.getElementById("wx-alert-detail");
+  if(!p)return;
+  if(p.style.display==="none"||!p.style.display){
+    p.className="al-detail "+alDetailLevelClass();
+    p.innerHTML=renderAlertDetail();
+    p.style.display="block";
+  }else{
+    p.style.display="none";
+  }
 }
 
 
@@ -1200,19 +1223,25 @@ function render(){
   const {main,name,region}=wxData,cur=main.current,d=main.daily;
   // Strip 7 giorni
   let fcHtml="";
+  const weekLvl=[];
   for(let i=0;i<Math.min(7,d.time.length);i++){
     const mm=d.precipitation_sum[i];
+    const al=computeAlerts(i).level; weekLvl[i]=al;
     fcHtml+=`<div class="fcd${i===0?" t0":""}${i===selDay?" act":""}" onclick="changeDay(${i})">
+      ${al>0?`<span class="fcalert lvl${al}"></span>`:""}
       <div class="fcn">${fmtDay(d.time[i],i)}</div>
       <div class="fci">${wiImg(d.weather_code[i],true,40)}</div>
       <div class="fct">${Math.round(d.temperature_2m_min[i])}°/${Math.round(d.temperature_2m_max[i])}°</div>
       <div class="fcp"><span class="dot" style="background:${pCol(mm)}"></span>${mm>0?parseFloat(mm).toFixed(1)+"mm":"Asciutto"}${d.precipitation_probability_max[i]>0?" ("+d.precipitation_probability_max[i]+"%)" :""}</div>
     </div>`;
   }
+  const weekMax=Math.max(0,...weekLvl);
+  const alTri=`<svg class="al-tri" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 2.5 22.6 21H1.4L12 2.5Z M11 9h2v6h-2z M11 16.3h2v2h-2z"/></svg>`;
+  const alTog=`<span class="al-toggle lvl${weekMax}" onclick="toggleAlertDetail(event)" title="Allerta meteo">${alTri} Allerta</span>`;
   // Sezioni con id per riordinamento
   const sections=[
     {id:"sec-hours",label:'<i class="fa-icon fa-regular fa-clock"></i> Ora per ora',tag:'<span class="tag tag-om">OPEN-METEO</span>',body:renderHourlyInner()},
-    {id:"sec-7days",label:'<i class="fa-icon fa-solid fa-calendar-week"></i> Previsioni 7 giorni · Tocca per le ore',body:`<div class="fcrow">${fcHtml}</div>`},
+    {id:"sec-7days",label:'<i class="fa-icon fa-solid fa-calendar-week"></i> Previsioni 7 giorni · Tocca per le ore '+alTog,body:`<div class="fcrow">${fcHtml}</div><div id="wx-alert-detail" class="al-detail" style="display:none"></div>`},
     {id:"sec-current",label:'<i class="fa-icon fa-solid fa-cloud-sun"></i> Condizioni attuali',tag:'<span class="tag tag-om">LIVE</span>',body:renderCurrentBody(cur,d)},
     {id:"sec-models",label:'<i class="fa-icon fa-solid fa-sliders"></i> Confronto modelli',body:renderModelsBody(selDay)},
     {id:"sec-advice",label:'<i class="fa-icon fa-solid fa-person-hiking"></i> Consiglio outdoor',body:renderAdviceBody(cur,d,0)},
@@ -1222,7 +1251,7 @@ function render(){
   const saved=JSON.parse(localStorage.getItem(ORD_KEY)||"null");
   const order=saved&&saved.every(id=>sections.some(s=>s.id===id))?saved:sections.map(s=>s.id);
   const orderedSections=order.map(id=>sections.find(s=>s.id===id)).filter(Boolean);
-  document.getElementById("content").innerHTML=renderAlertBanner()+orderedSections.map((s,idx)=>`
+  document.getElementById("content").innerHTML=orderedSections.map((s,idx)=>`
     <div class="card" id="${s.id}">
       <div class="clabel">
         <span class="flex1">${s.label}${s.tag?" "+s.tag:""}</span>
@@ -1425,8 +1454,8 @@ function outdoorAdvice(cur,d,dayIdx){
 
 function changeDay(i){
   selDay=i;
-  const wa=document.getElementById("wx-alert");
-  if(wa&&wxData) wa.outerHTML=renderAlertBanner();
+  const wd=document.getElementById("wx-alert-detail");
+  if(wd&&wd.style.display==="block"&&wxData){ wd.className="al-detail "+alDetailLevelClass(); wd.innerHTML=renderAlertDetail(); }
   document.querySelectorAll(".fcd").forEach((el,idx)=>el.classList.toggle("act",idx===i));
   const hc=document.getElementById("sec-hours");
   if(hc){
@@ -1646,7 +1675,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v25";
+    const sw=`const C="osm-v27";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
