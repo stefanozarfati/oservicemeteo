@@ -1232,7 +1232,7 @@ function render(){
       <div class="fcn">${fmtDay(d.time[i],i)}</div>
       <div class="fci">${wiImg(d.weather_code[i],true,40)}</div>
       <div class="fct">${Math.round(d.temperature_2m_min[i])}°/${Math.round(d.temperature_2m_max[i])}°</div>
-      <div class="fcp"><span class="dot" style="background:${pCol(mm)}"></span>${mm>0?parseFloat(mm).toFixed(1)+"mm":"Asciutto"}${d.precipitation_probability_max[i]>0?" ("+d.precipitation_probability_max[i]+"%)" :""}</div>
+      <div class="fcp">${mm>0?parseFloat(mm).toFixed(1)+"mm":"Asciutto"}${d.precipitation_probability_max[i]>0?" ("+d.precipitation_probability_max[i]+"%)" :""}</div>
     </div>`;
   }
   const weekMax=Math.max(0,...weekLvl);
@@ -1675,7 +1675,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v27";
+    const sw=`const C="osm-v28";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
