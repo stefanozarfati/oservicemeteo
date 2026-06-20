@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oservice News</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF0F3;--card:#FFFFFF;--ink:#181B22;--slate:#697383;--line:#E7E9EE;
+    --o1:#FF8A1E;--o2:#FF5400;--o-deep:#E64A00;--ok:#15A66B;--warn:#E89400;
+    --shadow:0 1px 2px rgba(20,25,35,.04),0 6px 22px rgba(20,25,35,.07);--maxw:600px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;}
+  .app{max-width:var(--maxw);margin:0 auto;min-height:100vh;}
+
+  header.hd{background:linear-gradient(135deg,var(--o1) 0%,var(--o2) 70%,var(--o-deep) 100%);color:#fff;padding:22px 20px 26px;border-radius:0 0 26px 26px;box-shadow:0 8px 26px rgba(255,84,0,.22);position:relative;overflow:hidden;}
+  header.hd::after{content:"";position:absolute;top:-60%;right:-20%;width:60%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);pointer-events:none;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .mark{width:30px;height:30px;border-radius:7px;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.18);}
+  .wordmark{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:25px;letter-spacing:-.02em;line-height:1;}
+  .wordmark span{font-weight:500;opacity:.92;}
+  .htag{font-size:13.5px;opacity:.92;margin:9px 0 0;font-weight:500;}
+
+  nav.levels{display:flex;gap:6px;background:rgba(255,255,255,.18);padding:5px;border-radius:13px;margin-top:18px;}
+  nav.levels button{flex:1;border:0;background:transparent;color:#fff;cursor:pointer;font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:13.5px;padding:9px 6px;border-radius:9px;transition:background .18s,color .18s,box-shadow .18s;}
+  nav.levels button.active{background:#fff;color:var(--o2);box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  nav.levels button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+
+  .localebar{display:none;gap:8px;margin-top:11px;}
+  .localebar.show{display:flex;}
+  .localebar input{flex:1;min-width:0;border:0;border-radius:11px;padding:11px 14px;font-family:"Hanken Grotesk",sans-serif;font-size:15px;color:var(--ink);background:#fff;}
+  .localebar input:focus-visible{outline:2px solid #fff;outline-offset:1px;}
+  .geo{border:0;background:rgba(255,255,255,.22);color:#fff;border-radius:11px;cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.04em;padding:0 13px;white-space:nowrap;font-weight:500;}
+  .geo:hover{background:rgba(255,255,255,.32);}
+
+  .body{padding:16px 16px 90px;}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 2px 14px;}
+  .updated{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--slate);letter-spacing:.02em;}
+  .refresh{border:0;border-radius:12px;cursor:pointer;color:#fff;font-weight:700;font-family:"Hanken Grotesk",sans-serif;font-size:14px;background:linear-gradient(135deg,var(--o1),var(--o2));padding:11px 20px;box-shadow:0 4px 14px rgba(255,84,0,.28);transition:transform .12s,box-shadow .12s;}
+  .refresh:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,84,0,.34);}
+  .refresh:active{transform:translateY(0);}
+  .refresh:disabled{opacity:.55;cursor:wait;}
+  .refresh:focus-visible{outline:3px solid var(--o2);outline-offset:2px;}
+
+  .feed{display:flex;flex-direction:column;gap:13px;}
+  article.item{background:var(--card);border-radius:18px;padding:18px 18px 16px;box-shadow:var(--shadow);border:1px solid var(--line);animation:rise .4s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px 9px;margin-bottom:10px;}
+  .chip{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.03em;font-weight:600;background:#F1F3F6;color:#3a4150;padding:4px 9px;border-radius:7px;}
+  .chip.src{background:#FFF1E6;color:var(--o-deep);}
+  .aff{display:inline-flex;align-items:center;gap:5px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;color:var(--slate);letter-spacing:.02em;}
+  .pip{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .pip.alta{background:var(--ok);box-shadow:0 0 0 3px rgba(21,166,107,.15);}
+  .pip.media{background:var(--warn);box-shadow:0 0 0 3px rgba(232,148,0,.15);}
+  h2.head{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:19px;line-height:1.22;letter-spacing:-.01em;margin:0;}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:11px;margin-top:13px;}
+  .lang{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--slate);letter-spacing:.02em;}
+  a.read{font-family:"Hanken Grotesk",sans-serif;font-weight:700;font-size:13px;color:var(--o2);text-decoration:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+  a.read:hover{color:var(--o-deep);}
+  a.read:focus-visible{outline:2px solid var(--o2);outline-offset:3px;border-radius:3px;}
+
+  .sk{background:var(--card);border-radius:18px;padding:18px;box-shadow:var(--shadow);border:1px solid var(--line);}
+  .sk .ln{height:13px;border-radius:6px;margin:9px 0;background:linear-gradient(90deg,#EEF0F3 25%,#E2E5EA 37%,#EEF0F3 63%);background-size:400% 100%;animation:sh 1.3s ease infinite;}
+  .sk .ln.t{width:38%;height:11px;}
+  .sk .ln.h{width:90%;height:18px;}
+  .sk .ln.h2{width:62%;height:18px;}
+  @keyframes sh{from{background-position:100% 0;}to{background-position:0 0;}}
+
+  .state{text-align:center;padding:46px 22px;color:var(--slate);}
+  .state .ic{font-size:34px;margin-bottom:8px;}
+  .state .big{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:19px;color:var(--ink);margin-bottom:6px;}
+  .state .sub{font-size:14px;}
+  .state.err .big{color:#b1361f;}
+
+  details.note{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;box-shadow:var(--shadow);}
+  details.note summary{font-family:"Hanken Grotesk",sans-serif;font-weight:700;font-size:13.5px;color:var(--o2);cursor:pointer;list-style:none;}
+  details.note summary::-webkit-details-marker{display:none;}
+  details.note summary::before{content:"\2139  ";}
+  details.note .nb{font-size:14px;color:var(--slate);margin-top:11px;line-height:1.6;}
+  details.note .nb strong{color:var(--ink);font-weight:600;}
+  details.note .nb p{margin:0 0 10px;}
+  details.note .nb p:last-child{margin-bottom:0;}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hd">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#fff"/>
+        <path d="M32 7v18a7 7 0 0 1-7 7H7Z" fill="#FF5400"/>
+      </svg>
+      <div class="wordmark">Oservice <span>News</span></div>
+    </div>
+    <p class="htag">Notizie al vaglio delle fonti, in italiano.</p>
+
+    <nav class="levels" role="tablist" aria-label="Livello">
+      <button data-level="locale" role="tab">Locale</button>
+      <button data-level="nazionale" role="tab" class="active" aria-selected="true">Nazionale</button>
+      <button data-level="mondo" role="tab">Mondo</button>
+    </nav>
+
+    <div class="localebar" id="localebar">
+      <input id="placeInput" type="text" placeholder="Comune o zona (es. Fiuggi)" autocomplete="off">
+      <button class="geo" id="geoBtn">&#9678; Posizione</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="toolbar">
+      <span class="updated" id="updated">pronto</span>
+      <button class="refresh" id="loadBtn">Aggiorna notizie</button>
+    </div>
+
+    <main class="feed" id="feed">
+      <div class="state">
+        <div class="ic">&#128240;</div>
+        <div class="big">Scegli un livello e tocca aggiorna</div>
+        <div class="sub">Le fonti inaffidabili restano fuori dal setaccio.</div>
+      </div>
+    </main>
+
+    <details class="note">
+      <summary>Come funziona e cosa garantisce</summary>
+      <div class="nb">
+        <p>Oservice News legge <strong>Google News in edizione italiana</strong> tramite un relay pubblico, così funziona in un browser normale e sul telefono. Le notizie arrivano in lingua italiana.</p>
+        <p><strong>Affidabilità:</strong> il pallino verde segnala una testata di una lista curata di fonti riconosciute (agenzie, quotidiani ed emittenti consolidate); l'ambra indica una fonte fuori da quella lista. È un filtro di reputazione, <strong>non</strong> un fact-checking: apri sempre il link per verificare.</p>
+        <p><strong>Limiti del prototipo:</strong> il relay pubblico può essere lento o non disponibile (in tal caso compare un errore, riprova); le schede non hanno il riassunto perché il feed non lo fornisce pulito; la traduzione letterale di articoli stranieri richiede la versione con backend.</p>
+        <p><strong>Per usarla come Meteo:</strong> carica questo file sul tuo GitHub Pages, aprilo e scegli "Aggiungi a Home". Avrai l'icona sul telefono.</p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+const state={level:"nazionale"};
+const feed=document.getElementById("feed");
+const loadBtn=document.getElementById("loadBtn");
+const updated=document.getElementById("updated");
+const localebar=document.getElementById("localebar");
+const placeInput=document.getElementById("placeInput");
+
+const TRUSTED=["ansa","rai","corriere","repubblica","sole 24","il post","sky tg","tgcom","internazionale","euronews","agi","adnkronos","avvenire","fatto quotidiano","la stampa","il messaggero","il giornale","open","wired","reuters","associated press","ap news","bbc","france 24","deutsche welle","dw","el pa","le monde","guardian","new york times","washington post","financial times","al jazeera","cnn","abc news","politico","the economist","nbc"];
+
+document.querySelectorAll("nav.levels button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll("nav.levels button").forEach(b=>{b.classList.remove("active");b.removeAttribute("aria-selected");});
+    btn.classList.add("active");btn.setAttribute("aria-selected","true");
+    state.level=btn.dataset.level;
+    localebar.classList.toggle("show",state.level==="locale");
+  });
+});
+
+document.getElementById("geoBtn").addEventListener("click",()=>{
+  const g=document.getElementById("geoBtn");
+  if(!navigator.geolocation){placeInput.placeholder="Scrivi il comune";return;}
+  g.textContent="Localizzo\u2026";
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const {latitude,longitude}=pos.coords;
+    try{
+      const r=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=it`);
+      const d=await r.json();
+      const loc=d.city||d.locality||d.principalSubdivision||"";
+      if(loc){placeInput.value=loc;g.textContent="\u25CE "+loc;}else g.textContent="Non rilevato";
+    }catch(e){g.textContent="Errore";}
+    setTimeout(()=>{g.textContent="\u25CE Posizione";},2600);
+  },()=>{g.textContent="Permesso negato";setTimeout(()=>{g.textContent="\u25CE Posizione";},2600);},{timeout:10000});
+});
+
+function feedUrl(){
+  const base="https://news.google.com/rss";
+  const tail="hl=it&gl=IT&ceid=IT:it";
+  if(state.level==="locale"){
+    return `${base}/search?q=${encodeURIComponent('"'+placeInput.value.trim()+'"')}&${tail}`;
+  }else if(state.level==="mondo"){
+    return `${base}/headlines/section/topic/WORLD?${tail}`;
+  }
+  return `${base}?${tail}`;
+}
+
+async function fetchText(target){
+  const proxies=[
+    u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u=>`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`
+  ];
+  for(let i=0;i<proxies.length;i++){
+    try{
+      const r=await fetch(proxies[i](target));
+      if(!r.ok) continue;
+      let t=await r.text();
+      if(i===2){ try{ t=JSON.parse(t).contents; }catch(_){} }
+      if(t && t.indexOf("<item")>-1) return t;
+    }catch(e){}
+  }
+  throw new Error("relay");
+}
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function fmtDate(d){
+  const t=new Date(d);
+  if(isNaN(t)) return "";
+  return t.toLocaleString("it-IT",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
+}
+
+function parseItems(xmlText){
+  const xml=new DOMParser().parseFromString(xmlText,"text/xml");
+  const nodes=[...xml.querySelectorAll("item")].slice(0,8);
+  return nodes.map(it=>{
+    let title=(it.querySelector("title")?.textContent||"").trim();
+    const link=(it.querySelector("link")?.textContent||"").trim();
+    const pub=(it.querySelector("pubDate")?.textContent||"").trim();
+    let source=(it.querySelector("source")?.textContent||"").trim();
+    if(!source && title.lastIndexOf(" - ")>0){
+      const i=title.lastIndexOf(" - ");
+      source=title.slice(i+3).trim();
+      title=title.slice(0,i).trim();
+    }
+    return {title,link,pub,source:source||"Fonte"};
+  }).filter(x=>x.title && x.link);
+}
+
+function render(items){
+  if(!items.length){
+    feed.innerHTML=`<div class="state"><div class="ic">&#128269;</div><div class="big">Nessuna notizia trovata</div><div class="sub">Prova un altro livello o un comune diverso.</div></div>`;
+    return;
+  }
+  feed.innerHTML=items.map(a=>{
+    const trusted=TRUSTED.some(s=>a.source.toLowerCase().indexOf(s)>-1);
+    const aff=trusted?"alta":"media";
+    const affLabel=trusted?"affidabilit\u00E0 alta":"affidabilit\u00E0 media";
+    return `<article class="item">
+      <div class="meta">
+        <span class="chip src">${esc(a.source)}</span>
+        <span class="aff"><span class="pip ${aff}"></span>${affLabel}</span>
+      </div>
+      <h2 class="head">${esc(a.title)}</h2>
+      <div class="foot">
+        <span class="lang">${a.pub?fmtDate(a.pub):"it"}</span>
+        <a class="read" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">Leggi la fonte &rarr;</a>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+function skeleton(){
+  let s="";for(let i=0;i<4;i++) s+=`<div class="sk"><div class="ln t"></div><div class="ln h"></div><div class="ln h2"></div></div>`;
+  feed.innerHTML=s;
+}
+
+async function load(){
+  if(state.level==="locale" && !placeInput.value.trim()){
+    feed.innerHTML=`<div class="state"><div class="ic">&#128205;</div><div class="big">Indica un comune</div><div class="sub">Scrivilo o usa la tua posizione.</div></div>`;
+    return;
+  }
+  loadBtn.disabled=true;updated.textContent="carico\u2026";skeleton();
+  try{
+    const xml=await fetchText(feedUrl());
+    render(parseItems(xml));
+    updated.textContent="aggiornato "+new Date().toLocaleString("it-IT",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
+  }catch(e){
+    feed.innerHTML=`<div class="state err"><div class="ic">&#9888;&#65039;</div><div class="big">Caricamento non riuscito</div><div class="sub">Il relay pubblico potrebbe essere occupato. Riprova tra poco.</div></div>`;
+    updated.textContent="errore";
+  }finally{loadBtn.disabled=false;}
+}
+
+loadBtn.addEventListener("click",load);
+placeInput.addEventListener("keydown",e=>{if(e.key==="Enter")load();});
+</script>
+</body>
+</html>
