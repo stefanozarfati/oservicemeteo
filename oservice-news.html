@@ -39,13 +39,17 @@
   .geo:hover{background:rgba(255,255,255,.32);}
 
   .body{padding:16px 16px 90px;}
-  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 2px 14px;}
-  .updated{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--slate);letter-spacing:.02em;}
-  .refresh{border:0;border-radius:12px;cursor:pointer;color:#fff;font-weight:700;font-family:"Hanken Grotesk",sans-serif;font-size:14px;background:linear-gradient(135deg,var(--o1),var(--o2));padding:11px 20px;box-shadow:0 4px 14px rgba(255,84,0,.28);transition:transform .12s,box-shadow .12s;}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 2px 6px;}
+  .toggle{border:1px solid var(--line);background:var(--card);color:var(--slate);border-radius:999px;cursor:pointer;font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:12.5px;padding:8px 13px;transition:background .15s,color .15s,border-color .15s;}
+  .toggle.on{background:#E9F8F1;color:#0d7a4f;border-color:#bfe9d6;}
+  .toggle:focus-visible{outline:2px solid var(--ok);outline-offset:2px;}
+  .refresh{border:0;border-radius:12px;cursor:pointer;color:#fff;font-weight:700;font-family:"Hanken Grotesk",sans-serif;font-size:14px;background:linear-gradient(135deg,var(--o1),var(--o2));padding:10px 18px;box-shadow:0 4px 14px rgba(255,84,0,.28);transition:transform .12s,box-shadow .12s;white-space:nowrap;}
   .refresh:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,84,0,.34);}
   .refresh:active{transform:translateY(0);}
   .refresh:disabled{opacity:.55;cursor:wait;}
   .refresh:focus-visible{outline:3px solid var(--o2);outline-offset:2px;}
+  .subbar{margin:0 2px 14px;}
+  .updated{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--slate);letter-spacing:.02em;}
 
   .feed{display:flex;flex-direction:column;gap:13px;}
   article.item{background:var(--card);border-radius:18px;padding:18px 18px 16px;box-shadow:var(--shadow);border:1px solid var(--line);animation:rise .4s ease both;}
@@ -57,6 +61,9 @@
   .pip{width:8px;height:8px;border-radius:50%;display:inline-block;}
   .pip.alta{background:var(--ok);box-shadow:0 0 0 3px rgba(21,166,107,.15);}
   .pip.media{background:var(--warn);box-shadow:0 0 0 3px rgba(232,148,0,.15);}
+  .acc{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:7px;}
+  .acc.free{background:#E9F8F1;color:#0d7a4f;}
+  .acc.pay{background:#FBF3E6;color:#9a6b12;}
   h2.head{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:19px;line-height:1.22;letter-spacing:-.01em;margin:0;}
   .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:11px;margin-top:13px;}
   .lang{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--slate);letter-spacing:.02em;}
@@ -115,9 +122,10 @@
 
   <div class="body">
     <div class="toolbar">
-      <span class="updated" id="updated">pronto</span>
-      <button class="refresh" id="loadBtn">Aggiorna notizie</button>
+      <button class="toggle on" id="freeToggle" aria-pressed="true">&#128275; Solo lettura libera</button>
+      <button class="refresh" id="loadBtn">Aggiorna</button>
     </div>
+    <div class="subbar"><span class="updated" id="updated">pronto</span></div>
 
     <main class="feed" id="feed">
       <div class="state">
@@ -130,24 +138,31 @@
     <details class="note">
       <summary>Come funziona e cosa garantisce</summary>
       <div class="nb">
-        <p>Oservice News legge <strong>Google News in edizione italiana</strong> tramite un relay pubblico, così funziona in un browser normale e sul telefono. Le notizie arrivano in lingua italiana.</p>
-        <p><strong>Affidabilità:</strong> il pallino verde segnala una testata di una lista curata di fonti riconosciute (agenzie, quotidiani ed emittenti consolidate); l'ambra indica una fonte fuori da quella lista. È un filtro di reputazione, <strong>non</strong> un fact-checking: apri sempre il link per verificare.</p>
-        <p><strong>Limiti del prototipo:</strong> il relay pubblico può essere lento o non disponibile (in tal caso compare un errore, riprova); le schede non hanno il riassunto perché il feed non lo fornisce pulito; la traduzione letterale di articoli stranieri richiede la versione con backend.</p>
-        <p><strong>Per usarla come Meteo:</strong> carica questo file sul tuo GitHub Pages, aprilo e scegli "Aggiungi a Home". Avrai l'icona sul telefono.</p>
+        <p>Oservice News legge <strong>Google News in edizione italiana</strong> tramite un relay pubblico. Le notizie arrivano in lingua italiana.</p>
+        <p><strong>Lettura libera:</strong> il badge verde &#128275; segnala le fonti che di norma si leggono senza abbonamento (agenzie ed emittenti pubbliche come ANSA, Rai, AGI, Euronews, BBC). Il badge &#128274; indica fonti che <em>possono</em> chiedere un abbonamento. Con l'interruttore in alto mostri solo le prime. È un'indicazione orientativa, non una garanzia: i siti cambiano le loro regole.</p>
+        <p><strong>Affidabilit&#224;:</strong> il pallino verde &#232; una testata di una lista curata di fonti riconosciute, l'ambra una fonte fuori da quella lista. &#200; un filtro di reputazione, non un fact-checking: apri sempre il link per verificare.</p>
+        <p><strong>Limiti del prototipo:</strong> il relay pubblico pu&#242; essere lento o non disponibile; le schede non hanno il riassunto perch&#233; il feed non lo fornisce; non aggira paywall n&#233; muri dei cookie.</p>
       </div>
     </details>
   </div>
 </div>
 
 <script>
-const state={level:"nazionale"};
+const state={level:"nazionale",freeOnly:true};
+let lastItems=[];
 const feed=document.getElementById("feed");
 const loadBtn=document.getElementById("loadBtn");
 const updated=document.getElementById("updated");
 const localebar=document.getElementById("localebar");
 const placeInput=document.getElementById("placeInput");
+const freeToggle=document.getElementById("freeToggle");
 
-const TRUSTED=["ansa","rai","corriere","repubblica","sole 24","il post","sky tg","tgcom","internazionale","euronews","agi","adnkronos","avvenire","fatto quotidiano","la stampa","il messaggero","il giornale","open","wired","reuters","associated press","ap news","bbc","france 24","deutsche welle","dw","el pa","le monde","guardian","new york times","washington post","financial times","al jazeera","cnn","abc news","politico","the economist","nbc"];
+const TRUSTED=["ansa","rai","corriere","repubblica","sole 24","il post","ilpost","sky tg","tgcom","internazionale","euronews","agi","adnkronos","askanews","avvenire","fatto quotidiano","la stampa","il messaggero","il giornale","open","wired","reuters","associated press","ap news","bbc","france 24","deutsche welle","dw","el pa","le monde","guardian","new york times","washington post","financial times","al jazeera","cnn","abc news","politico","the economist","nbc"];
+// fonti che di norma si leggono senza abbonamento
+const FREE=["ansa","rai","agi","adnkronos","askanews","euronews","tgcom","sky tg","open","today","ilpost","il post","fanpage","wired italia","bbc","france 24","al jazeera","deutsche welle","dw","reuters","ap news","associated press","euractiv"];
+
+function isTrusted(s){s=s.toLowerCase();return TRUSTED.some(x=>s.indexOf(x)>-1);}
+function isFree(s){s=s.toLowerCase();return FREE.some(x=>s.indexOf(x)>-1);}
 
 document.querySelectorAll("nav.levels button").forEach(btn=>{
   btn.addEventListener("click",()=>{
@@ -156,6 +171,14 @@ document.querySelectorAll("nav.levels button").forEach(btn=>{
     state.level=btn.dataset.level;
     localebar.classList.toggle("show",state.level==="locale");
   });
+});
+
+freeToggle.addEventListener("click",()=>{
+  state.freeOnly=!state.freeOnly;
+  freeToggle.classList.toggle("on",state.freeOnly);
+  freeToggle.setAttribute("aria-pressed",String(state.freeOnly));
+  freeToggle.innerHTML=(state.freeOnly?"\uD83D\uDD13 Solo lettura libera":"\uD83D\uDD13 Tutte le fonti");
+  if(lastItems.length) render(lastItems);
 });
 
 document.getElementById("geoBtn").addEventListener("click",()=>{
@@ -177,11 +200,8 @@ document.getElementById("geoBtn").addEventListener("click",()=>{
 function feedUrl(){
   const base="https://news.google.com/rss";
   const tail="hl=it&gl=IT&ceid=IT:it";
-  if(state.level==="locale"){
-    return `${base}/search?q=${encodeURIComponent('"'+placeInput.value.trim()+'"')}&${tail}`;
-  }else if(state.level==="mondo"){
-    return `${base}/headlines/section/topic/WORLD?${tail}`;
-  }
+  if(state.level==="locale") return `${base}/search?q=${encodeURIComponent('"'+placeInput.value.trim()+'"')}&${tail}`;
+  if(state.level==="mondo") return `${base}/headlines/section/topic/WORLD?${tail}`;
   return `${base}?${tail}`;
 }
 
@@ -204,43 +224,45 @@ async function fetchText(target){
 }
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-
-function fmtDate(d){
-  const t=new Date(d);
-  if(isNaN(t)) return "";
-  return t.toLocaleString("it-IT",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
-}
+function fmtDate(d){const t=new Date(d);if(isNaN(t))return"";return t.toLocaleString("it-IT",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});}
 
 function parseItems(xmlText){
   const xml=new DOMParser().parseFromString(xmlText,"text/xml");
-  const nodes=[...xml.querySelectorAll("item")].slice(0,8);
+  const nodes=[...xml.querySelectorAll("item")].slice(0,12);
   return nodes.map(it=>{
     let title=(it.querySelector("title")?.textContent||"").trim();
     const link=(it.querySelector("link")?.textContent||"").trim();
     const pub=(it.querySelector("pubDate")?.textContent||"").trim();
     let source=(it.querySelector("source")?.textContent||"").trim();
-    if(!source && title.lastIndexOf(" - ")>0){
-      const i=title.lastIndexOf(" - ");
-      source=title.slice(i+3).trim();
-      title=title.slice(0,i).trim();
-    }
+    if(!source && title.lastIndexOf(" - ")>0){const i=title.lastIndexOf(" - ");source=title.slice(i+3).trim();title=title.slice(0,i).trim();}
     return {title,link,pub,source:source||"Fonte"};
   }).filter(x=>x.title && x.link);
 }
 
 function render(items){
-  if(!items.length){
-    feed.innerHTML=`<div class="state"><div class="ic">&#128269;</div><div class="big">Nessuna notizia trovata</div><div class="sub">Prova un altro livello o un comune diverso.</div></div>`;
-    return;
+  // free sources first; if freeOnly, keep only those
+  let list=items.slice();
+  if(state.freeOnly) list=list.filter(a=>isFree(a.source));
+  else list.sort((a,b)=>(isFree(b.source)?1:0)-(isFree(a.source)?1:0));
+  list=list.slice(0,8);
+
+  if(!list.length){
+    const msg=state.freeOnly
+      ? `<div class="state"><div class="ic">&#128274;</div><div class="big">Nessuna fonte a lettura libera qui</div><div class="sub">Tocca l'interruttore in alto per vedere tutte le fonti.</div></div>`
+      : `<div class="state"><div class="ic">&#128269;</div><div class="big">Nessuna notizia trovata</div><div class="sub">Prova un altro livello o un comune diverso.</div></div>`;
+    feed.innerHTML=msg;return;
   }
-  feed.innerHTML=items.map(a=>{
-    const trusted=TRUSTED.some(s=>a.source.toLowerCase().indexOf(s)>-1);
+  feed.innerHTML=list.map(a=>{
+    const trusted=isTrusted(a.source);
     const aff=trusted?"alta":"media";
     const affLabel=trusted?"affidabilit\u00E0 alta":"affidabilit\u00E0 media";
+    const free=isFree(a.source);
+    const acc=free?`<span class="acc free">&#128275; libera</span>`:`<span class="acc pay">&#128274; pu\u00F2 chiedere abbonamento</span>`;
     return `<article class="item">
       <div class="meta">
         <span class="chip src">${esc(a.source)}</span>
         <span class="aff"><span class="pip ${aff}"></span>${affLabel}</span>
+        ${acc}
       </div>
       <h2 class="head">${esc(a.title)}</h2>
       <div class="foot">
@@ -251,20 +273,17 @@ function render(items){
   }).join("");
 }
 
-function skeleton(){
-  let s="";for(let i=0;i<4;i++) s+=`<div class="sk"><div class="ln t"></div><div class="ln h"></div><div class="ln h2"></div></div>`;
-  feed.innerHTML=s;
-}
+function skeleton(){let s="";for(let i=0;i<4;i++)s+=`<div class="sk"><div class="ln t"></div><div class="ln h"></div><div class="ln h2"></div></div>`;feed.innerHTML=s;}
 
 async function load(){
   if(state.level==="locale" && !placeInput.value.trim()){
-    feed.innerHTML=`<div class="state"><div class="ic">&#128205;</div><div class="big">Indica un comune</div><div class="sub">Scrivilo o usa la tua posizione.</div></div>`;
-    return;
+    feed.innerHTML=`<div class="state"><div class="ic">&#128205;</div><div class="big">Indica un comune</div><div class="sub">Scrivilo o usa la tua posizione.</div></div>`;return;
   }
   loadBtn.disabled=true;updated.textContent="carico\u2026";skeleton();
   try{
     const xml=await fetchText(feedUrl());
-    render(parseItems(xml));
+    lastItems=parseItems(xml);
+    render(lastItems);
     updated.textContent="aggiornato "+new Date().toLocaleString("it-IT",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
   }catch(e){
     feed.innerHTML=`<div class="state err"><div class="ic">&#9888;&#65039;</div><div class="big">Caricamento non riuscito</div><div class="sub">Il relay pubblico potrebbe essere occupato. Riprova tra poco.</div></div>`;
