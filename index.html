@@ -196,7 +196,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .htime{font-size:1.25rem;font-weight:800;color:#5a1e00;margin-bottom:.28rem;letter-spacing:.5px}
 .hico2{font-size:1rem;margin-bottom:.2rem;line-height:1}
 .htemp2{font-size:1rem;font-weight:800}
-.hwind{font-size:.75rem;color:var(--t2);margin-top:.14rem;line-height:1.3}
+.hwind{font-size:.75rem;color:var(--t);font-weight:600;margin-top:.14rem;line-height:1.3}
 .hrain{font-size:.75rem;color:var(--rain);margin-top:.1rem;font-weight:700}
 .hprob{font-size:.72rem;color:var(--t3)}
 .hfoot{font-size:.7rem;color:#c0c0c0;margin-top:.5rem;line-height:1.5}
@@ -1257,7 +1257,7 @@ function render(){
   const sections=[
     {id:"sec-hours",label:'<i class="fa-icon fa-regular fa-clock"></i> Ora per ora',tag:'<span class="tag tag-om">OPEN-METEO</span>',body:renderHourlyInner()},
     {id:"sec-7days",label:'<i class="fa-icon fa-solid fa-calendar-week"></i> Previsioni 7 giorni · Tocca per le ore '+alTog,body:`<div class="fcrow">${fcHtml}</div><div id="wx-alert-detail" class="al-detail" style="display:none"></div>`},
-    {id:"sec-current",label:'<i class="fa-icon fa-solid fa-cloud-sun"></i> Condizioni attuali',tag:'<span class="tag tag-om">LIVE</span>',body:renderCurrentBody(cur,d)},
+    {id:"sec-current",label:'<i class="fa-icon fa-solid fa-cloud-sun"></i> Condizioni attuali',tag:'<span class="tag tag-om">LIVE</span>',body:renderCurrentBody(cur,d,selDay)},
     {id:"sec-models",label:'<i class="fa-icon fa-solid fa-sliders"></i> Confronto modelli',body:renderModelsBody(selDay)},
     {id:"sec-advice",label:'<i class="fa-icon fa-solid fa-person-hiking"></i> Consiglio outdoor',body:renderAdviceBody(cur,d,0)},
     {id:"sec-astro",label:'<i class="fa-icon fa-solid fa-sun"></i> Astronomia',body:'<div id="astro-body">'+renderAstro(d)+'</div>'}
@@ -1304,7 +1304,31 @@ function render(){
   },400);
 }
 
-function renderCurrentBody(cur,d){
+function renderCurrentBody(cur,d,dayIdx){
+  dayIdx=dayIdx||0;
+  // ── ALTRI GIORNI: riepilogo previsto del giorno selezionato ──────────────
+  if(dayIdx>0){
+    return `<div class="hero">
+    <div class="hico">${wiImg(d.weather_code[dayIdx],true,72)}</div>
+    <div style="flex:1;min-width:140px">
+      <div class="hloc">${escH(CUR.name)}</div>
+      <div class="hreg">${escH(CUR.region||"")}</div>
+      <div class="htemp">${Math.round(d.temperature_2m_max[dayIdx])}°<span style="font-size:1.2rem;color:var(--t2);font-weight:300">C max</span></div>
+      <div class="hfeel">Minima ${Math.round(d.temperature_2m_min[dayIdx])}°C</div>
+      <div class="hdesc">${wl(d.weather_code[dayIdx])}</div>
+    </div>
+  </div>
+  <div class="dgrid">
+    <div class="di"><i class="fa-icon fa-solid fa-temperature-half di-icon"></i><div class="dl">Min/Max</div><div class="dv">${Math.round(d.temperature_2m_min[dayIdx])}°/${Math.round(d.temperature_2m_max[dayIdx])}°C</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-umbrella di-icon"></i><div class="dl">Prob. pioggia</div><div class="dv">${d.precipitation_probability_max&&d.precipitation_probability_max[dayIdx]!=null?d.precipitation_probability_max[dayIdx]+"%":"—"}</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-cloud-rain di-icon"></i><div class="dl">Precip.</div><div class="dv"><span class="dot" style="background:${pCol(d.precipitation_sum[dayIdx])}"></span>${d.precipitation_sum[dayIdx]>0?parseFloat(d.precipitation_sum[dayIdx]).toFixed(1)+"mm":"Assenti"}</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-wind di-icon"></i><div class="dl">Vento max</div><div class="dv">${Math.round(d.wind_speed_10m_max[dayIdx])} km/h</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-bolt di-icon"></i><div class="dl">Raffiche max</div><div class="dv">${Math.round(d.wind_gusts_10m_max[dayIdx])} km/h</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-radiation di-icon"></i><div class="dl">UV max</div><div class="dv">${d.uv_index_max[dayIdx]} — ${uvL(d.uv_index_max[dayIdx])}</div></div>
+    <div class="di"><i class="fa-icon fa-solid fa-circle-half-stroke di-icon"></i><div class="dl">Alba/Tramonto</div><div class="dv" style="font-size:.82rem">${fmtT(d.sunrise[dayIdx])} / ${fmtT(d.sunset[dayIdx])}</div></div>
+  </div>`;
+  }
+  // ── OGGI: condizioni LIVE in tempo reale ─────────────────────────────────
   const vis=cur.visibility!=null?(cur.visibility/1000).toFixed(0)+"km":"—";
   return `<div class="hero">
     <div class="hico">${wiImg(cur.weather_code,cur.is_day!==0,72)}</div>
@@ -1327,7 +1351,6 @@ function renderCurrentBody(cur,d){
     <div class="di"><i class="fa-icon fa-solid fa-circle-half-stroke di-icon"></i><div class="dl">Alba/Tramonto</div><div class="dv" style="font-size:.82rem">${fmtT(d.sunrise[0])} / ${fmtT(d.sunset[0])}</div></div>
   </div>`;
 }
-
 function renderModelsBody(i){
   if(!wxData)return"";
   const {ecmwf,icon,gfs}=wxData;
@@ -1436,7 +1459,7 @@ function renderHourlyInner(){
       <div class="htime">${String(h.hour).padStart(2,"0")}:00</div>
       <div class="hico2">${wiImg(h.wmo,!(h.hour<srH||h.hour>=ssH),36)}</div>
       <div class="htemp2">${Math.round(h.temp)}°</div>
-      <div class="hwind">${wDir(h.dir)} ${Math.round(h.wind)}<br><span style="color:var(--t3)">↑${Math.round(h.gusts)}</span></div>
+      <div class="hwind">${wDir(h.dir)} ${Math.round(h.wind)}<br><span style="color:var(--t2);font-weight:600">↑${Math.round(h.gusts)}</span></div>
       ${h.precip>0?`<div class="hrain">${h.precip.toFixed(1)}mm</div>`:""}
       ${h.prob>0?`<div class="hprob">${h.prob}%</div>`:""}
     </div>`;
@@ -1487,6 +1510,19 @@ function changeDay(i){
     mc.innerHTML="";
     mc.appendChild(cl);
     mc.insertAdjacentHTML("beforeend",renderModelsBody(i));
+  }
+  // Aggiorna condizioni attuali / riepilogo del giorno selezionato
+  const cc=document.getElementById("sec-current");
+  if(cc&&wxData){
+    const cl=cc.querySelector(".clabel");
+    cc.innerHTML="";
+    cc.appendChild(cl);
+    cc.insertAdjacentHTML("beforeend",renderCurrentBody(wxData.main.current,wxData.main.daily,i));
+    const span=cl.querySelector(".flex1");
+    if(span){
+      if(i===0) span.innerHTML='<i class="fa-icon fa-solid fa-cloud-sun"></i> Condizioni attuali <span class="tag tag-om">LIVE</span>';
+      else span.innerHTML='<i class="fa-icon fa-solid fa-calendar-day"></i> Riepilogo · '+fmtDay(wxData.main.daily.time[i],i);
+    }
   }
   // Aggiorna consiglio outdoor per il giorno selezionato
   const ac=document.getElementById("sec-advice");
@@ -1691,7 +1727,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v30";
+    const sw=`const C="osm-v31";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
