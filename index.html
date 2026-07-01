@@ -348,28 +348,8 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
   <div id="radar-panel">
     <div class="rdr-hdr">
       <span class="rdr-title">🌧️ Radar Precipitazioni</span>
-      <div class="rdr-tabs">
-        <button class="rtab act" id="rtab-windy" onclick="switchRadar('windy')" style="border-color:rgba(0,90,160,.5);color:#005aa0;font-weight:700">Windy ★</button>
-        <button class="rtab" id="rtab-rv" onclick="switchRadar('rv')">Rainviewer</button>
-        <button class="rtab" id="rtab-dpc" onclick="switchRadar('dpc')">Prot. Civile</button>
-      </div>
+      <span class="rdr-title-sub" style="font-size:.62rem;color:var(--t3);margin-left:.4rem">Windy</span>
       <button class="rdr-close" onclick="toggleRadar()">✕</button>
-    </div>
-    <!-- Rainviewer -->
-    <div id="rv-wrap">
-      <div id="rmap"></div>
-      <div class="rdr-ctrl">
-        <button class="rctrl" onclick="rPrev()">◀</button>
-        <button class="rctrl" id="rplay" onclick="rToggle()">▶</button>
-        <button class="rctrl" onclick="rNext()">▶▶</button>
-        <div id="rtl"></div>
-        <div id="rtime">--:--</div>
-      </div>
-      <div class="rdr-leg">
-        <div class="rl-dot" style="background:#6ab4e0"></div><span>Passato 30 min</span>
-        <div class="rl-dot" style="background:#ff8c30;margin-left:.5rem"></div><span>Nowcast 30 min</span>
-        <span style="margin-left:auto;font-size:.65rem">RainViewer</span>
-      </div>
     </div>
     <!-- Windy embed -->
     <div class="dpc-wrap" id="windy-wrap">
@@ -378,19 +358,6 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
         Previsione precipitazioni · <a href="https://www.windy.com" target="_blank" style="color:#3ab0ff">Windy.com</a> · usa la barra temporale per vedere le prossime ore
       </div>
     </div>
-    <!-- DPC -->
-    <div class="dpc-wrap" id="dpc-wrap">
-      <div id="dpc-map"></div>
-      <div class="rdr-ctrl">
-        <button class="rctrl" onclick="dPrev()">◀</button>
-        <button class="rctrl" id="dplay" onclick="dToggle()">▶</button>
-        <button class="rctrl" onclick="dNext()">▶▶</button>
-        <div id="dtl"></div>
-        <div id="dtime">--:--</div>
-      </div>
-      <div class="rdr-leg"><span>🇮🇹 Protezione Civile · SRI · Solo passato · 5 min</span></div>
-    </div>
-
   </div>
 
   <!-- Preferito toggle -->
@@ -836,6 +803,22 @@ const WX_ICONS = {
   "fog": `<svg viewBox="0 0 64 64"><g stroke="#8a98a0" stroke-width="3.6" stroke-linecap="round">
     <line x1="14" y1="22" x2="50" y2="22"/><line x1="18" y1="32" x2="46" y2="32"/>
     <line x1="14" y1="42" x2="50" y2="42"/></g></svg>`,
+
+  "partly-day-rain": `<svg viewBox="0 0 64 64"><circle cx="22" cy="20" r="8.5" fill="#e8a200"/>
+    <g stroke="#b87800" stroke-width="2.4" stroke-linecap="round">
+    <line x1="22" y1="5" x2="22" y2="9"/><line x1="7" y1="20" x2="11" y2="20"/>
+    <line x1="11" y1="9" x2="14" y2="12"/><line x1="33" y1="9" x2="30" y2="12"/></g>
+    <path d="M46 50H24a10 10 0 0 1 0-20 13 13 0 0 1 25 3 8 8 0 0 1-3 17z" fill="#cfd8dd" stroke="#a4b0b8" stroke-width="1.5"/>
+    <g stroke="#4aa3e0" stroke-width="3" stroke-linecap="round"><line x1="28" y1="54" x2="25" y2="61"/><line x1="40" y1="54" x2="37" y2="61"/></g></svg>`,
+
+  "partly-day-snow": `<svg viewBox="0 0 64 64"><circle cx="22" cy="20" r="8.5" fill="#e8a200"/>
+    <g stroke="#b87800" stroke-width="2.4" stroke-linecap="round">
+    <line x1="22" y1="5" x2="22" y2="9"/><line x1="7" y1="20" x2="11" y2="20"/>
+    <line x1="11" y1="9" x2="14" y2="12"/><line x1="33" y1="9" x2="30" y2="12"/></g>
+    <path d="M46 50H24a10 10 0 0 1 0-20 13 13 0 0 1 25 3 8 8 0 0 1-3 17z" fill="#cfd8dd" stroke="#a4b0b8" stroke-width="1.5"/>
+    <g stroke="#4a90d0" stroke-width="2" stroke-linecap="round">
+    <g transform="translate(28 57)"><line x1="-3" y1="0" x2="3" y2="0"/><line x1="0" y1="-3" x2="0" y2="3"/><line x1="-2.1" y1="-2.1" x2="2.1" y2="2.1"/><line x1="-2.1" y1="2.1" x2="2.1" y2="-2.1"/></g>
+    <g transform="translate(40 57)"><line x1="-3" y1="0" x2="3" y2="0"/><line x1="0" y1="-3" x2="0" y2="3"/><line x1="-2.1" y1="-2.1" x2="2.1" y2="2.1"/><line x1="-2.1" y1="2.1" x2="2.1" y2="-2.1"/></g></g></svg>`,
 };
 
 // Mappa codice WMO -> chiave icona base (day/night gestito a parte per clear/partly)
@@ -854,13 +837,51 @@ function wmoIconKey(code, isDay){
   return "cloudy";
 }
 
-function wiImg(code, isDay, size){
+function wiImg(code, isDay, size, forceKey){
   size=size||44;
-  const key=wmoIconKey(code,isDay);
+  const key=forceKey||wmoIconKey(code,isDay);
   let svg=WX_ICONS[key]||WX_ICONS["cloudy"];
   svg=svg.replace('<svg ','<svg style="width:100%;height:100%;display:block" ');
   return '<span style="display:inline-block;vertical-align:middle;width:'+size+'px;height:'+size+'px;background:rgba(255,255,255,.55);border-radius:50%;padding:'+Math.round(size*0.08)+'px;box-sizing:border-box;filter:drop-shadow(0 1px 4px rgba(0,0,0,.25))" title="'+wl(code)+'">'+svg+'</span>';
 }
+
+// Icona/label rappresentativa del giorno: mix proporzionale dai codici ORARI,
+// non il "peggiore" del giorno (evita di mostrare pioggia per 2-3 ore su 24).
+function dayRep(i){
+  const d=wxData.main.daily, h=wxData.main.hourly, date=d.time[i], codes=[];
+  if(h&&h.time&&h.weather_code){
+    for(let k=0;k<h.time.length;k++){ if((h.time[k]||"").slice(0,10)===date && h.weather_code[k]!=null) codes.push(h.weather_code[k]); }
+  }
+  if(!codes.length){ const c=d.weather_code[i]; return {key:wmoIconKey(c,true), code:c}; }
+  const N=codes.length;
+  const isRain=c=>(c>=51&&c<=67)||(c>=80&&c<=82);
+  const isSnow=c=>(c>=71&&c<=77)||c===85||c===86;
+  const isThun=c=>c>=95;
+  let rain=0,snow=0,thun=0,clear=0,partly=0,over=0,fog=0;
+  codes.forEach(c=>{
+    if(isThun(c))thun++; else if(isSnow(c))snow++; else if(isRain(c))rain++;
+    else if(c===0||c===1)clear++; else if(c===2)partly++; else if(c===3)over++; else if(c===45||c===48)fog++;
+  });
+  const precip=rain+snow+thun, pf=precip/N;
+  // Temporali: se non del tutto sporadici hanno priorità (sicurezza)
+  if(thun>=Math.max(2,N*0.12)) return {key:"thunder", code:95};
+  if(pf>=0.5){ // precipitazione dominante: tipo prevalente
+    if(snow>=rain&&snow>=thun) return {key:"snow", code:73};
+    if(thun>rain) return {key:"thunder", code:95};
+    return {key:"rain", code:63};
+  }
+  if(precip>0){ // minoranza di precipitazione su giornata perlopiù buona → icona mista
+    const bg=(clear>=over&&clear>=partly&&clear>=fog); // sfondo prevalentemente sereno?
+    if(snow>=rain) return {key: bg?"partly-day-snow":"snow", code:85};
+    return {key: bg?"partly-day-rain":"rain", code:80};
+  }
+  // nessuna precipitazione: mix di nuvolosità
+  if(fog>=N*0.4) return {key:"fog", code:45};
+  if(clear>=N*0.6) return {key:"clear-day", code:0};
+  if(over>=N*0.5) return {key:"cloudy", code:3};
+  return {key:"partly-day", code:2};
+}
+function wiDay(i,size){ const r=dayRep(i); return wiImg(r.code,true,size,r.key); }
 function pCol(mm){if(!mm||mm<.2)return"#2ab84a";if(mm<3)return"#f09020";if(mm<12)return"#e05020";return"#b02020";}
 function wDir(d){return["N","NE","E","SE","S","SO","O","NO"][Math.round((d||0)/45)%8]||"—";}
 function fmtT(s){if(!s)return"--";const d=new Date(s);return d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});}
@@ -1245,7 +1266,7 @@ function render(){
     fcHtml+=`<div class="fcd${i===0?" t0":""}${i===selDay?" act":""}" onclick="changeDay(${i})">
       ${al>0?`<span class="fcalert lvl${al}"></span>`:""}
       <div class="fcn">${fmtDay(d.time[i],i)}</div>
-      <div class="fci">${wiImg(d.weather_code[i],true,40)}</div>
+      <div class="fci">${wiDay(i,40)}</div>
       <div class="fct">${Math.round(d.temperature_2m_min[i])}°/${Math.round(d.temperature_2m_max[i])}°</div>
       <div class="fcp">${mm>0?parseFloat(mm).toFixed(1)+"mm":"Asciutto"}${d.precipitation_probability_max[i]>0?" ("+d.precipitation_probability_max[i]+"%)" :""}</div>
     </div>`;
@@ -1309,13 +1330,13 @@ function renderCurrentBody(cur,d,dayIdx){
   // ── ALTRI GIORNI: riepilogo previsto del giorno selezionato ──────────────
   if(dayIdx>0){
     return `<div class="hero">
-    <div class="hico">${wiImg(d.weather_code[dayIdx],true,72)}</div>
+    <div class="hico">${wiDay(dayIdx,72)}</div>
     <div style="flex:1;min-width:140px">
       <div class="hloc">${escH(CUR.name)}</div>
       <div class="hreg">${escH(CUR.region||"")}</div>
       <div class="htemp">${Math.round(d.temperature_2m_max[dayIdx])}°<span style="font-size:1.2rem;color:var(--t2);font-weight:300">C max</span></div>
       <div class="hfeel">Minima ${Math.round(d.temperature_2m_min[dayIdx])}°C</div>
-      <div class="hdesc">${wl(d.weather_code[dayIdx])}</div>
+      <div class="hdesc">${wl(dayRep(dayIdx).code)}</div>
     </div>
   </div>
   <div class="dgrid">
@@ -1594,18 +1615,9 @@ function refreshRadarPos(){
 }
 
 function switchRadar(mode){
-  curRadarMode=mode;
-  ["rv","dpc","windy"].forEach(m=>{
-    const t=document.getElementById("rtab-"+m);
-    if(t) t.classList.toggle("act",m===mode);
-  });
-  document.getElementById("rv-wrap").style.display=mode==="rv"?"block":"none";
-  document.getElementById("dpc-wrap").style.display=mode==="dpc"?"block":"none";
-  document.getElementById("windy-wrap").style.display=mode==="windy"?"block":"none";
-  stopR();stopD();
-  if(mode==="rv") initRV();
-  else if(mode==="dpc") initDPC();
-  else if(mode==="windy") initWindy();
+  curRadarMode="windy";
+  const w=document.getElementById("windy-wrap"); if(w) w.style.display="block";
+  initWindy();
 }
 
 
@@ -1727,7 +1739,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v31";
+    const sw=`const C="osm-v32";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
