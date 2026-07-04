@@ -899,6 +899,37 @@ function dayRep(i){
   return {key:"partly-day", code:2};                                          // parzialmente nuvoloso
 }
 function wiDay(i,size){ const r=dayRep(i); return wiImg(r.code,true,size,r.key); }
+
+// ── Condizioni del mare (Open-Meteo Marine) ──
+function seaState(h){
+  if(h==null)return"";
+  if(h<0.1)return"Mare calmo";
+  if(h<0.5)return"Quasi calmo";
+  if(h<1.25)return"Poco mosso";
+  if(h<2.5)return"Mosso";
+  if(h<4)return"Molto mosso";
+  if(h<6)return"Agitato";
+  return"Molto agitato";
+}
+function renderSeaBody(){
+  const m=wxData.marine||{}, c=m.current||{}, dd=m.daily||{};
+  const t=c.sea_surface_temperature, wh=c.wave_height, wp=c.wave_period, wdir=c.wave_direction;
+  const whMax=(dd.wave_height_max||[])[0];
+  const n1=v=>(v==null?"—":(Math.round(v*10)/10).toString().replace(".",","));
+  const ss=seaState(wh);
+  return `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:.8rem;flex-wrap:wrap">
+      ${t!=null?`<div><div style="font-size:2.1rem;font-weight:800;color:#0d6a8f;line-height:1">${Math.round(t)}°<span style="font-size:1rem">C</span></div><div style="font-size:.75rem;font-weight:700;color:var(--t2)">Temp. mare</div></div>`:''}
+      ${ss?`<span style="align-self:center;background:rgba(13,106,143,.14);color:#0d5a7a;font-size:.82rem;font-weight:700;padding:.2rem .7rem;border-radius:9px">${ss}</span>`:''}
+    </div>
+    <div class="dgrid">
+      <div class="di"><i class="fa-icon fa-solid fa-water di-icon"></i><div class="dl">Altezza onde</div><div class="dv">${n1(wh)} m</div></div>
+      <div class="di"><i class="fa-icon fa-regular fa-clock di-icon"></i><div class="dl">Periodo onde</div><div class="dv">${wp==null?"—":Math.round(wp)+" s"}</div></div>
+      <div class="di"><i class="fa-icon fa-solid fa-location-arrow di-icon"></i><div class="dl">Direzione onde</div><div class="dv">${wdir==null?"—":"da "+wDir(wdir)}</div></div>
+      <div class="di"><i class="fa-icon fa-solid fa-wave-square di-icon"></i><div class="dl">Onde max oggi</div><div class="dv">${n1(whMax)} m</div></div>
+    </div>
+    <div style="font-size:.65rem;color:var(--t3);margin-top:.5rem">Dati: Open-Meteo Marine · modello onde 5&nbsp;km (Mediterraneo) / 28&nbsp;km (globale)</div>`;
+}
 function pCol(mm){if(!mm||mm<.2)return"#2ab84a";if(mm<3)return"#f09020";if(mm<12)return"#e05020";return"#b02020";}
 function wDir(d){return["N","NE","E","SE","S","SO","O","NO"][Math.round((d||0)/45)%8]||"—";}
 function fmtT(s){if(!s)return"--";const d=new Date(s);return d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});}
@@ -1172,8 +1203,10 @@ async function fetchWeather(lat,lon,name,region){
       fetch("https://api.open-meteo.com/v1/forecast?"+new URLSearchParams({...base,daily:["temperature_2m_max","temperature_2m_min","weather_code","precipitation_sum"].join(","),models:"icon_seamless"})),
       fetch("https://api.open-meteo.com/v1/forecast?"+new URLSearchParams({...base,daily:["temperature_2m_max","temperature_2m_min","weather_code","precipitation_sum"].join(","),models:"gfs_seamless"}))
     ]);
+    const marineP=fetch("https://marine-api.open-meteo.com/v1/marine?"+new URLSearchParams({latitude:lat,longitude:lon,timezone:"auto",current:["wave_height","wave_direction","wave_period","sea_surface_temperature"].join(","),daily:["wave_height_max","wave_period_max","wave_direction_dominant"].join(","),forecast_days:1})).then(r=>r.json()).catch(()=>null);
     const [main,ecmwf,icon,gfs]=await Promise.all([rM.json(),rE.json(),rI.json(),rG.json()]);
-    wxData={main,ecmwf,icon,gfs};
+    const marine=await marineP;
+    wxData={main,ecmwf,icon,gfs,marine};
     render();
     // Aggiorna radar se aperto
     if(document.getElementById("radar-panel").classList.contains("open"))refreshRadarPos();
@@ -1300,9 +1333,16 @@ function render(){
     {id:"sec-advice",label:'<i class="fa-icon fa-solid fa-person-hiking"></i> Consiglio outdoor',body:renderAdviceBody(cur,d,0)},
     {id:"sec-astro",label:'<i class="fa-icon fa-solid fa-sun"></i> Astronomia',body:'<div id="astro-body">'+renderAstro(d)+'</div>'}
   ];
+  // Card mare: solo se la marine API ha restituito onde valide (località costiere)
+  if(wxData.marine&&wxData.marine.current&&typeof wxData.marine.current.wave_height==="number"){
+    const ci=sections.findIndex(s=>s.id==="sec-current");
+    sections.splice(ci>=0?ci+1:sections.length,0,{id:"sec-sea",label:'<i class="fa-icon fa-solid fa-water"></i> Condizioni del mare',tag:'<span class="tag tag-om">MARINE</span>',body:renderSeaBody()});
+  }
   // Ripristina ordine salvato
   const saved=JSON.parse(localStorage.getItem(ORD_KEY)||"null");
-  const order=saved&&saved.every(id=>sections.some(s=>s.id===id))?saved:sections.map(s=>s.id);
+  const savedF=(Array.isArray(saved)?saved:[]).filter(id=>sections.some(s=>s.id===id));
+  const missing=sections.map(s=>s.id).filter(id=>!savedF.includes(id));
+  const order=savedF.length?savedF.concat(missing):sections.map(s=>s.id);
   const orderedSections=order.map(id=>sections.find(s=>s.id===id)).filter(Boolean);
   document.getElementById("content").innerHTML=orderedSections.map((s,idx)=>`
     <div class="card" id="${s.id}">
@@ -1758,7 +1798,7 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;docu
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    const sw=`const C="osm-v37";
+    const sw=`const C="osm-v38";
 self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["/"]))));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",e=>{
