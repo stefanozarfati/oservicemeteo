@@ -24,6 +24,7 @@
   --rain:#1a6090;--ok:#1a6030;--warn:#8a3000;--bad:#8a0000;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+html{font-size:115%}  /* schede ingrandite del 15% */
 body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-height:100vh}
 .bg{position:fixed;inset:0;z-index:0;
   background:
@@ -187,11 +188,11 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle;margin-right:3px}
 
 /* Orari */
-.hscroll{overflow-x:auto;padding-bottom:.3rem}
+.hscroll{overflow-x:auto;padding-bottom:.3rem;zoom:.739}  /* tabella ora per ora: -15% rispetto a prima */
 .hscroll::-webkit-scrollbar{height:3px}
 .hscroll::-webkit-scrollbar-thumb{background:rgba(240,112,32,.4);border-radius:2px}
 .htable{display:flex;gap:.35rem;min-width:max-content}
-.hcol{flex-shrink:0;width:142px;background:rgba(255,255,255,.18);border-radius:10px;
+.hcol{flex-shrink:0;width:163px;background:rgba(255,255,255,.18);border-radius:10px;
   padding:.6rem .35rem;text-align:center;border:1px solid rgba(255,255,255,.08)}
 .hcol.now{background:rgba(255,255,255,.5);border:2.5px solid rgba(0,0,0,.4);box-shadow:0 2px 12px rgba(0,0,0,.2)}
 .htime{font-size:1.63rem;font-weight:800;color:#5a1e00;margin-bottom:.28rem;letter-spacing:.5px}
@@ -1767,7 +1768,7 @@ document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP
 // ---------- AGGIORNAMENTO AUTOMATICO ----------
 // All'apertura e a ogni ritorno in primo piano, l'app chiede al server se
 // esiste una versione piu' recente e in quel caso si ricarica da sola.
-const VERSIONE="2026-10-30-1843";
+const VERSIONE="2026-10-31-0003";
 async function controllaVersione(){
   try{
     const r=await fetch("versione.json?t="+Date.now(),{cache:"no-store"});
