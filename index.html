@@ -1768,7 +1768,7 @@ document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP
 // ---------- AGGIORNAMENTO AUTOMATICO ----------
 // All'apertura e a ogni ritorno in primo piano, l'app chiede al server se
 // esiste una versione piu' recente e in quel caso si ricarica da sola.
-const VERSIONE="2026-10-31-0003";
+const VERSIONE="2026-10-31-0020";
 async function controllaVersione(){
   try{
     const r=await fetch("versione.json?t="+Date.now(),{cache:"no-store"});
