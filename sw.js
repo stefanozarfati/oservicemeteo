@@ -1,4 +1,5 @@
-const C="osm-v39";
+const VERSIONE="2026-10-30-1843";
+const C="osm-"+VERSIONE;
 
 self.addEventListener("install",e=>{
   self.skipWaiting();
@@ -8,6 +9,8 @@ self.addEventListener("install",e=>{
     )).catch(()=>{})
   );
 });
+
+self.addEventListener("message",e=>{ if(e.data==="aggiornati")self.skipWaiting(); });
 
 self.addEventListener("activate",e=>{
   e.waitUntil(
@@ -24,6 +27,8 @@ self.addEventListener("fetch",e=>{
   let url;
   try{url=new URL(req.url);}catch(err){return;}
   if(url.origin!==self.location.origin)return;
+  // Il file di versione non si mette MAI in cache: e' lui che segnala le novita'.
+  if(url.pathname.indexOf("versione.json")>=0)return;
   e.respondWith(
     fetch(req).then(res=>{
       if(res&&res.ok){

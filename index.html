@@ -1764,6 +1764,34 @@ function showErr(msg){document.getElementById("content").innerHTML=`<div class="
 let dPwP=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;document.getElementById("ibanner").classList.add("show");});
 document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
+// ---------- AGGIORNAMENTO AUTOMATICO ----------
+// All'apertura e a ogni ritorno in primo piano, l'app chiede al server se
+// esiste una versione piu' recente e in quel caso si ricarica da sola.
+const VERSIONE="2026-10-30-1843";
+async function controllaVersione(){
+  try{
+    const r=await fetch("versione.json?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json();
+    if(!d.versione||d.versione===VERSIONE)return;
+    if(sessionStorage.getItem("ricaricata")===d.versione)return;  // una volta sola
+    sessionStorage.setItem("ricaricata",d.versione);
+    if("caches" in window){
+      const k=await caches.keys();
+      await Promise.all(k.map(n=>caches.delete(n)));
+    }
+    if("serviceWorker" in navigator){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){ if(reg.waiting)reg.waiting.postMessage("aggiornati"); await reg.update(); }
+    }
+    location.reload();
+  }catch(e){}
+}
+controllaVersione();
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible")controllaVersione();
+});
+
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
     navigator.serviceWorker.register("sw.js").catch(()=>{});
