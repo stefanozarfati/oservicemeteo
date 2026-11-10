@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Meteo · Chi può entrare</title>
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --o:#7a2e00;--o2:#5c2000;--bg:#ff8c31;--c1:#f07820;
+  --bd:rgba(0,0,0,.15);--bd2:rgba(0,0,0,.28);
+  --t:#1a0800;--t2:#4a2000;--t3:#7a4010;
+  --ok:#1a6030;--warn:#8a3000;--bad:#8a0000;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:linear-gradient(160deg,#ff8c31,#e86c18);color:var(--t);min-height:100vh;padding:1rem}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:1.4rem;color:#fff;margin:.2rem 0 1rem;text-shadow:0 1px 3px rgba(0,0,0,.25)}
+h2{font-size:1.05rem;color:var(--o);margin:0 0 .7rem}
+.card{background:rgba(255,255,255,.94);border-radius:16px;padding:1.1rem;margin-bottom:1rem;
+  box-shadow:0 6px 24px rgba(0,0,0,.18)}
+button{font-family:inherit;font-size:.95rem;font-weight:600;border:0;border-radius:10px;
+  padding:.65rem .9rem;background:var(--o);color:#fff;cursor:pointer}
+button:disabled{opacity:.5}
+button.sec{background:#fff;color:var(--o);border:2px solid var(--bd2)}
+button.no{background:var(--bad)}
+button.si{background:var(--ok)}
+button.sm{font-size:.82rem;padding:.45rem .6rem}
+input{font-family:inherit;font-size:1rem;padding:.65rem;border:2px solid var(--bd2);
+  border-radius:10px;width:100%;background:#fff;color:var(--t)}
+.row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.item{border-top:1px solid var(--bd);padding:.8rem 0}
+.item:first-of-type{border-top:0}
+.nome{font-weight:700;font-size:1rem}
+.meta{font-size:.82rem;color:var(--t3);margin:.15rem 0 .5rem;word-break:break-word}
+.cod{font-family:ui-monospace,Menlo,monospace;font-size:1.25rem;font-weight:700;letter-spacing:2px;color:var(--o)}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:.2rem .45rem;border-radius:6px;
+  background:#eee;color:var(--t2);vertical-align:middle;margin-left:.4rem}
+.tag.libero{background:#d8ecd8;color:var(--ok)}
+.tag.usato{background:#ffe3cc;color:var(--warn)}
+.tag.blocc{background:#f6d4d4;color:var(--bad)}
+.vuoto{font-size:.9rem;color:var(--t3);font-style:italic}
+.pill{font-size:.8rem;color:var(--t3)}
+#msg{font-size:.9rem;font-weight:600;min-height:1.2em;margin:.5rem 0 0}
+.hid{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Meteo · chi può entrare</h1>
+
+  <!-- non collegato -->
+  <div class="card" id="c-login">
+    <h2>Accesso riservato</h2>
+    <p class="pill" id="p-login">Entra con il tuo account Google per gestire gli accessi.</p>
+    <button id="b-login">Entra con Google</button>
+    <p id="msg"></p>
+  </div>
+
+  <!-- richieste -->
+  <div class="card hid" id="c-ric">
+    <h2>Richieste in attesa <span class="tag" id="n-ric">0</span></h2>
+    <div id="l-ric"></div>
+  </div>
+
+  <!-- codici -->
+  <div class="card hid" id="c-cod">
+    <h2>Codici</h2>
+    <div class="row">
+      <input id="i-nota" placeholder="A chi lo dai? (es. Marco Rossi)" maxlength="60">
+      <button id="b-crea">Crea un codice</button>
+    </div>
+    <p class="pill" id="p-crea" style="margin:.5rem 0 0"></p>
+    <div id="l-cod" style="margin-top:.9rem"></div>
+  </div>
+
+  <!-- approvati tramite richiesta -->
+  <div class="card hid" id="c-appr">
+    <h2>Entrati con richiesta</h2>
+    <div id="l-appr"></div>
+  </div>
+
+  <div class="card hid" id="c-esci">
+    <button class="sec" id="b-esci">Esci</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+var CFG={apiKey:"AIzaSyCxuhqiYCAbrvaRT0GbkICTSX2nw9EM2EI",
+  authDomain:"oservice-meteo.firebaseapp.com",
+  projectId:"oservice-meteo",
+  storageBucket:"oservice-meteo.firebasestorage.app",
+  messagingSenderId:"876101299002",
+  appId:"1:876101299002:web:b74392571330586082fe03"};
+var PADRONE="stefanozarfati@gmail.com";
+firebase.initializeApp(CFG);
+var db=firebase.firestore(), au=firebase.auth();
+
+function el(id){return document.getElementById(id);}
+function mostra(id,si){el(id).classList.toggle("hid",!si);}
+function msg(t,c){el("msg").textContent=t||"";el("msg").style.color=c||"var(--bad)";}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function data(ts){
+  if(!ts||!ts.toDate)return "";
+  var d=ts.toDate(), p=function(n){return n<10?"0"+n:""+n;};
+  return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+
+el("b-login").addEventListener("click",function(){
+  msg("");
+  au.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){
+    msg("Non sono riuscito a entrare: "+(e.message||e.code));
+  });
+});
+el("b-esci").addEventListener("click",function(){ au.signOut(); location.reload(); });
+
+au.onAuthStateChanged(function(u){
+  if(!u){ mostra("c-login",true); ["c-ric","c-cod","c-appr","c-esci"].forEach(function(i){mostra(i,false);}); return; }
+  if(u.email!==PADRONE){
+    el("p-login").textContent="L'account "+u.email+" non è autorizzato.";
+    el("b-login").textContent="Esci e riprova";
+    el("b-login").onclick=function(){ au.signOut().then(function(){location.reload();}); };
+    return;
+  }
+  mostra("c-login",false);
+  ["c-ric","c-cod","c-appr","c-esci"].forEach(function(i){mostra(i,true);});
+  ascoltaRichieste(); ascoltaCodici();
+});
+
+// ── RICHIESTE ────────────────────────────────────────────────
+function ascoltaRichieste(){
+  db.collection("richieste").orderBy("creato","desc").onSnapshot(function(sn){
+    var attesa=[], dentro=[];
+    sn.forEach(function(d){ (((d.data().stato)||"attesa")==="attesa"?attesa:dentro).push(d); });
+    el("n-ric").textContent=attesa.length;
+    el("l-ric").innerHTML = attesa.length?"":'<p class="vuoto">Nessuna richiesta in attesa.</p>';
+    attesa.forEach(function(d){ el("l-ric").appendChild(rigaRichiesta(d,true)); });
+    el("l-appr").innerHTML = dentro.length?"":'<p class="vuoto">Nessuno.</p>';
+    dentro.forEach(function(d){ el("l-appr").appendChild(rigaRichiesta(d,false)); });
+  },function(e){ msg("Errore lettura richieste: "+e.message); });
+}
+function rigaRichiesta(doc,inAttesa){
+  var v=doc.data(), div=document.createElement("div");
+  div.className="item";
+  var st=v.stato||"attesa";
+  var tag = st==="ok" ? '<span class="tag libero">dentro</span>'
+          : st==="no" ? '<span class="tag blocc">rifiutata</span>' : "";
+  div.innerHTML='<div class="nome">'+esc(v.nome)+tag+'</div>'+
+    '<div class="meta">'+esc(v.contatto)+' · '+data(v.creato)+'</div>';
+  var row=document.createElement("div"); row.className="row";
+  function b(testo,classe,fn){
+    var x=document.createElement("button"); x.textContent=testo; x.className="sm "+classe;
+    x.addEventListener("click",function(){ x.disabled=true; fn().catch(function(e){ msg(e.message); x.disabled=false; }); });
+    row.appendChild(x);
+  }
+  if(inAttesa){
+    b("Approva","si",function(){ return doc.ref.update({stato:"ok"}); });
+    b("Rifiuta","no",function(){ return doc.ref.update({stato:"no"}); });
+  }else{
+    if(st==="ok") b("Togli l'accesso","no",function(){ return doc.ref.update({stato:"no"}); });
+    else b("Approva","si",function(){ return doc.ref.update({stato:"ok"}); });
+    b("Cancella","sec",function(){
+      if(!confirm("Cancellare la richiesta di "+(v.nome||"")+"?")) return Promise.resolve();
+      return doc.ref.delete();
+    });
+  }
+  div.appendChild(row);
+  return div;
+}
+
+// ── CODICI ───────────────────────────────────────────────────
+var ALF="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function nuovoCodice(){
+  var out="", r=new Uint8Array(8); crypto.getRandomValues(r);
+  for(var i=0;i<8;i++) out+=ALF[r[i]%ALF.length];
+  return out;
+}
+el("b-crea").addEventListener("click",function(){
+  var nota=(el("i-nota").value||"").trim();
+  if(nota.length<2){ el("p-crea").textContent="Scrivi prima a chi lo dai."; return; }
+  var b=el("b-crea"); b.disabled=true; el("p-crea").textContent="Creo...";
+  var cod=nuovoCodice();
+  db.collection("codici").doc(cod).set({
+    nota:nota.slice(0,60), usato:false, telefono:"", bloccato:false,
+    creato:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    b.disabled=false; el("i-nota").value="";
+    el("p-crea").textContent="Codice per "+nota+": "+cod+" — mandaglielo.";
+  }).catch(function(e){ b.disabled=false; el("p-crea").textContent="Errore: "+e.message; });
+});
+
+function ascoltaCodici(){
+  db.collection("codici").orderBy("creato","desc").onSnapshot(function(sn){
+    el("l-cod").innerHTML = sn.size?"":'<p class="vuoto">Nessun codice creato.</p>';
+    sn.forEach(function(d){ el("l-cod").appendChild(rigaCodice(d)); });
+  },function(e){ msg("Errore lettura codici: "+e.message); });
+}
+function rigaCodice(doc){
+  var v=doc.data(), div=document.createElement("div");
+  div.className="item";
+  var tag = v.bloccato ? '<span class="tag blocc">bloccato</span>'
+          : v.usato ? '<span class="tag usato">in uso</span>'
+          : '<span class="tag libero">libero</span>';
+  var quando = v.usato&&v.usatoIl ? "usato il "+data(v.usatoIl) : "non ancora usato";
+  div.innerHTML='<div><span class="cod">'+esc(doc.id)+'</span>'+tag+'</div>'+
+    '<div class="meta">'+esc(v.nota||"")+' · '+quando+'</div>';
+  var row=document.createElement("div"); row.className="row";
+  function b(testo,classe,fn){
+    var x=document.createElement("button"); x.textContent=testo; x.className="sm "+classe;
+    x.addEventListener("click",function(){ x.disabled=true; Promise.resolve(fn()).catch(function(e){ msg(e.message); }).then(function(){ x.disabled=false; }); });
+    row.appendChild(x);
+  }
+  b("Copia","sec",function(){
+    try{ navigator.clipboard.writeText(doc.id); msg("Codice copiato.","var(--ok)"); }catch(e){}
+    return Promise.resolve();
+  });
+  if(v.bloccato) b("Riattiva","si",function(){ return doc.ref.update({bloccato:false}); });
+  else b("Blocca","no",function(){ return doc.ref.update({bloccato:true}); });
+  if(v.usato) b("Slega dal telefono","sec",function(){
+    if(!confirm("Il codice tornerà libero e potrà essere usato su un altro telefono. Procedo?")) return Promise.resolve();
+    return doc.ref.update({usato:false,telefono:""});
+  });
+  b("Cancella","sec",function(){
+    if(!confirm("Cancellare il codice "+doc.id+"? Chi lo sta usando resta fuori al prossimo controllo.")) return Promise.resolve();
+    return doc.ref.delete();
+  });
+  div.appendChild(row);
+  return div;
+}
+</script>
+</body>
+</html>

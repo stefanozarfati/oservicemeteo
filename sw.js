@@ -1,4 +1,4 @@
-const VERSIONE="2026-10-31-0020";
+const VERSIONE="2026-11-11-0022";
 const C="osm-"+VERSIONE;
 
 self.addEventListener("install",e=>{

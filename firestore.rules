@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Registro degli accessi di OService Meteo.
+// L'app (visitatore senza login) non puo' MAI leggere l'elenco dei codici:
+// puo' solo "timbrare" un codice che gia' conosce col proprio telefono.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function padrone() {
+      return request.auth != null
+        && request.auth.token.email == 'stefanozarfati@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // ── Codici di accesso ──────────────────────────────────────────
+    match /codici/{codice} {
+      // Stefano: tutto
+      allow read, write: if padrone();
+
+      // Visitatore: solo timbrare. Riesce se il codice esiste, non e'
+      // bloccato, e non e' ancora legato a un altro telefono.
+      allow update: if request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['usato','telefono','usatoIl','vistoIl'])
+        && resource.data.get('bloccato', false) == false
+        && request.resource.data.usato == true
+        && request.resource.data.telefono is string
+        && request.resource.data.telefono.size() >= 10
+        && request.resource.data.telefono.size() <= 64
+        && ( resource.data.get('usato', false) == false
+             || resource.data.get('telefono', '') == request.resource.data.telefono );
+    }
+
+    // ── Richieste di accesso ───────────────────────────────────────
+    // L'id del documento e' l'identificativo casuale del telefono:
+    // solo chi lo possiede puo' rileggere la propria richiesta.
+    match /richieste/{telefono} {
+      allow read, write: if padrone();
+
+      allow create: if request.auth == null
+        && telefono.size() >= 10
+        && request.resource.data.keys().hasOnly(['nome','contatto','creato','stato','browser'])
+        && request.resource.data.stato == 'attesa'
+        && request.resource.data.creato is timestamp
+        && request.resource.data.nome is string
+        && request.resource.data.nome.size() > 1
+        && request.resource.data.nome.size() <= 80
+        && request.resource.data.contatto is string
+        && request.resource.data.contatto.size() <= 120
+        && request.resource.data.browser is string
+        && request.resource.data.browser.size() <= 200;
+
+      allow get: if request.auth == null;
+    }
+
+    // Tutto il resto: chiuso.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
