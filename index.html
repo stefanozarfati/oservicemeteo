@@ -314,7 +314,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 <!-- ══════════════════════════════════════════════════════════════
      PORTONE D'INGRESSO  (accesso su invito)
      Chi usava gia' l'app passa senza accorgersene. Chi arriva nuovo
-     deve avere un codice, o chiedere l'accesso a Stefano.
+     deve avere un codice, e il codice vale per un telefono solo.
      ══════════════════════════════════════════════════════════════ -->
 <style>
 #gate{position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#ff8c31,#e86c18);
@@ -325,54 +325,24 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 #gate .gsub{font-size:.95rem;color:var(--t2);margin:0 0 1.2rem;line-height:1.45}
 #gate input{width:100%;box-sizing:border-box;padding:.85rem;font-size:1.15rem;text-align:center;
   border:2px solid var(--bd2);border-radius:12px;background:#fff;color:var(--t);margin-bottom:.7rem;
-  font-family:inherit}
-#gate input.gnorm{text-align:left;font-size:1rem;text-transform:none;letter-spacing:normal}
-#gate #g-cod{text-transform:uppercase;letter-spacing:2px;font-weight:700}
+  font-family:inherit;text-transform:uppercase;letter-spacing:2px;font-weight:700}
 #gate button{width:100%;padding:.9rem;font-size:1.05rem;font-weight:700;border:0;border-radius:12px;
   background:var(--o);color:#fff;cursor:pointer;font-family:inherit}
 #gate button:disabled{opacity:.5}
-#gate .glink{display:inline-block;margin-top:1.1rem;font-size:.9rem;color:var(--o2);
-  text-decoration:underline;cursor:pointer}
 #gate .gmsg{font-size:.9rem;line-height:1.45;margin:.8rem 0 0;min-height:1.2em}
 #gate .gmsg.err{color:var(--bad);font-weight:600}
 #gate .gmsg.ok{color:var(--ok);font-weight:600}
-#gate .gstep{display:none}
-#gate .gstep.on{display:block}
-#gate label{display:block;text-align:left;font-size:.85rem;font-weight:600;color:var(--t2);margin:.3rem 0 .25rem}
+#gate .gpiede{font-size:.82rem;color:var(--t3);margin:1.1rem 0 0;line-height:1.4}
 </style>
 <div id="gate">
   <div class="gbox">
     <h1>OService Meteo</h1>
-
-    <!-- passo 1: codice -->
-    <div class="gstep on" id="g-s1">
-      <p class="gsub">App riservata.<br>Inserisci il codice che hai ricevuto.</p>
-      <input id="g-cod" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
-             spellcheck="false" placeholder="CODICE" maxlength="12">
-      <button id="g-entra">Entra</button>
-      <p class="gmsg" id="g-m1"></p>
-      <span class="glink" id="g-vai2">Non ho un codice</span>
-    </div>
-
-    <!-- passo 2: chiedi l'accesso -->
-    <div class="gstep" id="g-s2">
-      <p class="gsub">Lascia i tuoi dati: la richiesta arriva a Stefano,<br>che decide se darti l'accesso.</p>
-      <label for="g-nome">Nome e cognome</label>
-      <input id="g-nome" class="gnorm" type="text" autocomplete="name" maxlength="80" placeholder="Mario Rossi">
-      <label for="g-cont">Telefono o email</label>
-      <input id="g-cont" class="gnorm" type="text" autocomplete="email" maxlength="120" placeholder="per poterti rispondere">
-      <button id="g-invia">Invia la richiesta</button>
-      <p class="gmsg" id="g-m2"></p>
-      <span class="glink" id="g-vai1">Ho un codice</span>
-    </div>
-
-    <!-- passo 3: in attesa -->
-    <div class="gstep" id="g-s3">
-      <p class="gsub" id="g-t3">Richiesta inviata.<br>Appena Stefano l'approva, l'app si apre da sola.</p>
-      <button id="g-ric">Controlla adesso</button>
-      <p class="gmsg" id="g-m3"></p>
-      <span class="glink" id="g-vai1b">Ho un codice</span>
-    </div>
+    <p class="gsub">App riservata.<br>Inserisci il codice che hai ricevuto.</p>
+    <input id="g-cod" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
+           spellcheck="false" placeholder="CODICE" maxlength="12">
+    <button id="g-entra">Entra</button>
+    <p class="gmsg" id="g-m1"></p>
+    <p class="gpiede">Senza codice l'app non è utilizzabile.</p>
   </div>
 </div>
 <script>
@@ -388,6 +358,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
   function g(k){try{return localStorage.getItem(k);}catch(e){return null;}}
   function s(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+  function via(k){try{localStorage.removeItem(k);}catch(e){}}
   var gate=document.getElementById("gate");
   function apri(){ if(gate&&gate.parentNode) gate.parentNode.removeChild(gate); }
   function el(id){return document.getElementById(id);}
@@ -436,14 +407,13 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
       });
     });
   }
-  function ora(){ return firebase.firestore.FieldValue.serverTimestamp(); }
 
   // timbra un codice su questo telefono (serve anche per i ricontrolli)
   function timbra(cod,primo,cb){
     fb(function(err){
       if(err) return cb("rete");
       var dati={usato:true,telefono:tel()};
-      dati[primo?"usatoIl":"vistoIl"]=ora();
+      dati[primo?"usatoIl":"vistoIl"]=firebase.firestore.FieldValue.serverTimestamp();
       firebase.firestore().collection("codici").doc(cod).update(dati)
         .then(function(){cb(null);})
         .catch(function(e){
@@ -453,122 +423,48 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     });
   }
 
-  // stato della propria richiesta
-  function leggiRichiesta(cb){
-    fb(function(err){
-      if(err) return cb("rete");
-      firebase.firestore().collection("richieste").doc(tel()).get()
-        .then(function(d){ cb(null, d.exists?(d.data().stato||"attesa"):"niente"); })
-        .catch(function(){ cb("rete"); });
-    });
-  }
-
   // ── 2. chi e' gia' autorizzato ──
   var ok=g("osm_ok");
   if(ok){
     apri();
-    // i vecchi non vengono mai ricontrollati; gli altri una volta al giorno
-    if(ok!=="vecchio"){
-      var ultimo=parseInt(g("osm_chk")||"0",10);
-      if(Date.now()-ultimo>GIORNO){
-        setTimeout(function(){
-          if(ok.indexOf("cod:")===0){
-            timbra(ok.slice(4),false,function(e){
-              if(!e) s("osm_chk",String(Date.now()));
-              else if(e==="no"){ try{localStorage.removeItem("osm_ok");}catch(x){} }
-            });
-          }else if(ok==="richiesta"){
-            leggiRichiesta(function(e,st){
-              if(e) return;
-              if(st==="ok") s("osm_chk",String(Date.now()));
-              else { try{localStorage.removeItem("osm_ok");}catch(x){} }
-            });
-          }
-        },4000);
-      }
+    // i vecchi non vengono mai ricontrollati; chi e' entrato col codice, una volta al giorno
+    if(ok.indexOf("cod:")===0 && Date.now()-parseInt(g("osm_chk")||"0",10)>GIORNO){
+      setTimeout(function(){
+        timbra(ok.slice(4),false,function(e){
+          if(!e) s("osm_chk",String(Date.now()));
+          else if(e==="no") via("osm_ok");
+        });
+      },4000);
     }
     return;
   }
 
-  // ── 3. portone visibile: gestione dei tre passi ──
-  function passo(n){
-    ["g-s1","g-s2","g-s3"].forEach(function(id,i){
-      el(id).classList.toggle("on", i===n-1);
-    });
+  // ── 3. portone visibile ──
+  function msg(testo,tipo){
+    var p=el("g-m1"); p.textContent=testo||""; p.className="gmsg"+(tipo?" "+tipo:"");
   }
-  function msg(id,testo,tipo){
-    var p=el(id); p.textContent=testo||""; p.className="gmsg"+(tipo?" "+tipo:"");
-  }
-
-  el("g-vai2").addEventListener("click",function(){ msg("g-m1",""); passo(2); });
-  el("g-vai1").addEventListener("click",function(){ msg("g-m2",""); passo(1); });
-  el("g-vai1b").addEventListener("click",function(){ msg("g-m3",""); passo(1); });
-
-  // Entra col codice
   var tentativi=0, fermo=0;
   function entra(){
     var cod=(el("g-cod").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
-    if(cod.length<4){ msg("g-m1","Scrivi il codice per intero.","err"); return; }
-    if(Date.now()<fermo){ msg("g-m1","Troppi tentativi: aspetta un minuto.","err"); return; }
-    var b=el("g-entra"); b.disabled=true; msg("g-m1","Controllo...");
+    if(cod.length<4){ msg("Scrivi il codice per intero.","err"); return; }
+    if(Date.now()<fermo){ msg("Troppi tentativi: aspetta un minuto.","err"); return; }
+    var b=el("g-entra"); b.disabled=true; msg("Controllo...");
     timbra(cod,true,function(e){
       b.disabled=false;
       if(!e){
         s("osm_ok","cod:"+cod); s("osm_chk",String(Date.now()));
-        msg("g-m1","Accesso sbloccato.","ok");
+        msg("Accesso sbloccato.","ok");
         setTimeout(apri,500);
         return;
       }
-      if(e==="rete"){ msg("g-m1","Senza internet non posso controllare il codice.","err"); return; }
+      if(e==="rete"){ msg("Senza internet non posso controllare il codice.","err"); return; }
       tentativi++;
       if(tentativi>=5){ fermo=Date.now()+60000; tentativi=0; }
-      msg("g-m1","Codice sbagliato, o gia' usato su un altro telefono.","err");
+      msg("Codice sbagliato, o gia' usato su un altro telefono.","err");
     });
   }
   el("g-entra").addEventListener("click",entra);
   el("g-cod").addEventListener("keydown",function(ev){ if(ev.key==="Enter") entra(); });
-
-  // Chiedi l'accesso
-  el("g-invia").addEventListener("click",function(){
-    var nome=(el("g-nome").value||"").trim(), cont=(el("g-cont").value||"").trim();
-    if(nome.length<2){ msg("g-m2","Scrivi nome e cognome.","err"); return; }
-    if(cont.length<3){ msg("g-m2","Lascia un telefono o una email.","err"); return; }
-    var b=el("g-invia"); b.disabled=true; msg("g-m2","Invio...");
-    fb(function(err){
-      if(err){ b.disabled=false; msg("g-m2","Senza internet non posso inviare la richiesta.","err"); return; }
-      firebase.firestore().collection("richieste").doc(tel()).set({
-        nome:nome.slice(0,80), contatto:cont.slice(0,120), stato:"attesa",
-        creato:ora(), browser:(navigator.userAgent||"").slice(0,200)
-      }).then(function(){
-        b.disabled=false; passo(3); msg("g-m3","");
-      }).catch(function(){
-        b.disabled=false;
-        // richiesta gia' presente: mostro lo stato
-        leggiRichiesta(function(e,st){
-          if(e){ msg("g-m2","Non riesco a inviare: riprova piu' tardi.","err"); return; }
-          if(st==="ok"){ s("osm_ok","richiesta"); s("osm_chk",String(Date.now())); apri(); return; }
-          if(st==="no"){ passo(3); el("g-t3").innerHTML="La richiesta non e' stata accolta.<br>Se pensi sia un errore, parla con Stefano."; return; }
-          passo(3); msg("g-m3","Avevi gia' inviato una richiesta.","ok");
-        });
-      });
-    });
-  });
-
-  // Controlla adesso
-  el("g-ric").addEventListener("click",function(){
-    var b=el("g-ric"); b.disabled=true; msg("g-m3","Controllo...");
-    leggiRichiesta(function(e,st){
-      b.disabled=false;
-      if(e){ msg("g-m3","Senza internet non posso controllare.","err"); return; }
-      if(st==="ok"){
-        s("osm_ok","richiesta"); s("osm_chk",String(Date.now()));
-        msg("g-m3","Accesso sbloccato.","ok"); setTimeout(apri,500); return;
-      }
-      if(st==="no"){ msg("g-m3","La richiesta non e' stata accolta.","err"); return; }
-      if(st==="niente"){ msg("g-m3","Non risulta nessuna richiesta: inviala di nuovo.","err"); return; }
-      msg("g-m3","Ancora in attesa. Riprova piu' tardi.","err");
-    });
-  });
 })();
 </script>
 <!-- ══════════════════ fine portone ══════════════════ -->
@@ -2029,7 +1925,7 @@ document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP
 // ---------- AGGIORNAMENTO AUTOMATICO ----------
 // All'apertura e a ogni ritorno in primo piano, l'app chiede al server se
 // esiste una versione piu' recente e in quel caso si ricarica da sola.
-const VERSIONE="2026-11-11-0022";
+const VERSIONE="2026-11-11-1024";
 async function controllaVersione(){
   try{
     const r=await fetch("versione.json?t="+Date.now(),{cache:"no-store"});

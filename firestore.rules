@@ -31,31 +31,11 @@ service cloud.firestore {
              || resource.data.get('telefono', '') == request.resource.data.telefono );
     }
 
-    // ── Richieste di accesso ───────────────────────────────────────
-    // L'id del documento e' l'identificativo casuale del telefono:
-    // solo chi lo possiede puo' rileggere la propria richiesta.
-    match /richieste/{telefono} {
-      allow read, write: if padrone();
-
-      allow create: if request.auth == null
-        && telefono.size() >= 10
-        && request.resource.data.keys().hasOnly(['nome','contatto','creato','stato','browser'])
-        && request.resource.data.stato == 'attesa'
-        && request.resource.data.creato is timestamp
-        && request.resource.data.nome is string
-        && request.resource.data.nome.size() > 1
-        && request.resource.data.nome.size() <= 80
-        && request.resource.data.contatto is string
-        && request.resource.data.contatto.size() <= 120
-        && request.resource.data.browser is string
-        && request.resource.data.browser.size() <= 200;
-
-      allow get: if request.auth == null;
-    }
-
-    // Tutto il resto: chiuso.
+    // Tutto il resto: chiuso a chiunque non sia Stefano.
+    // (La vecchia raccolta "richieste" non e' piu' usata: il modulo di
+    //  richiesta e' stato tolto dall'app l'11/11/2026.)
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if padrone();
     }
   }
 }

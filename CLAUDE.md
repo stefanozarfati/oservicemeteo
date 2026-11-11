@@ -131,42 +131,50 @@ superi `innerWidth` a 375 px di larghezza (misura iPhone).
 L'app non è più libera: all'apertura c'è un **portone** (il blocco in cima a
 `index.html`, subito dopo `<body>`, cercare "PORTONE D'INGRESSO").
 
-Come decide chi entra, in ordine:
+Chi entra, e come:
 
 1. **Chi usava già l'app** — se in `localStorage` c'è `osm_fav`, `osm_rec` o
    `osm_order`, scrive `osm_ok="vecchio"` ed entra per sempre, senza controlli
-   online. Era la scelta di Stefano: chi c'era resta dentro.
+   online. Scelta di Stefano: chi c'era resta dentro.
 2. **Chi ha un codice** — 8 caratteri (alfabeto senza lettere ambigue). L'app
    non legge mai l'elenco: tenta solo di *timbrare* il documento
    `codici/<CODICE>` col proprio identificativo di telefono (`osm_dev`, 24
    caratteri casuali). Se il timbro riesce, il codice resta legato a quel
-   telefono e non funziona più altrove. In locale resta `osm_ok="cod:<CODICE>"`.
-3. **Chi chiede l'accesso** — scrive `richieste/<osm_dev>` con nome e contatto.
-   Quando Stefano mette `stato:"ok"`, l'app si sblocca da sola.
+   telefono e altrove non funziona più. In locale resta `osm_ok="cod:<CODICE>"`.
+3. **Nessun altro.** La schermata dice solo "App riservata" e non offre nessun
+   modo di contattare Stefano — **è voluto**: non vuole sentirsi in imbarazzo a
+   negare l'accesso, né che estranei si facciano dare il suo numero. Non
+   riproporre moduli di richiesta, pulsanti WhatsApp o avvisi via email: il
+   modulo di richiesta c'era e **è stato tolto l'11/11/2026** su sua richiesta,
+   insieme all'idea della mail di notifica (giudicata troppi passaggi per un
+   problema che non ha).
 
-**Ricontrollo:** una volta al giorno (`osm_chk`) chi è entrato con codice o
-richiesta viene riverificato; se il codice è stato bloccato o cancellato, o la
-richiesta revocata, il portone torna. Senza rete non blocca nessuno.
+**Ricontrollo:** una volta al giorno (`osm_chk`) chi è entrato col codice viene
+riverificato; se il codice è stato bloccato o cancellato, il portone torna.
+Senza rete non blocca nessuno.
 
 ### Dove sta il registro
 
 Progetto Firebase **`oservice-meteo`** (separato da TEAM), Firestore in `eur3`.
 Regole in `firestore.rules`: il visitatore **non può leggere né elencare**
-niente, può solo timbrare un codice che già conosce e creare la propria
-richiesta. Pieno accesso solo a `stefanozarfati@gmail.com`.
+niente, può solo timbrare un codice che già conosce. Tutto il resto è riservato
+a `stefanozarfati@gmail.com`. (Nel database resta inerte una vecchia raccolta
+`richieste` con due documenti di prova: non la usa più nessuno.)
 
 ### La pagina di Stefano
 
 `pannello/index.html`, pubblicata su **https://oservice-meteo.web.app**
 (Firebase Hosting, non GitHub Pages: così il login Google funziona senza
 autorizzare altri domini). Login con Google, solo la sua email.
-Da lì: creare codici, copiarli, bloccarli, slegarli da un telefono (serve
-quando qualcuno cambia telefono o svuota i dati), cancellarli; approvare o
-rifiutare le richieste, e togliere l'accesso a chi era già entrato.
+Due sezioni: **Pronti da mandare** e **In uso**. Il pulsante
+**Prepara 10 codici** ne crea dieci in un colpo (scrittura in `batch`), così fa
+scorta e li manda per messaggio senza riaprire la pagina. Per ogni codice:
+Copia, "A chi?" (annota il nome dopo averlo mandato), Blocca, Slega dal
+telefono (serve a chi cambia telefono o svuota i dati), Cancella.
 
 Si pubblica con `firebase deploy --only hosting` (le regole con
-`firebase deploy --only firestore:rules`). L'app, invece, resta su GitHub
-Pages con `./pubblica.sh`.
+`firebase deploy --only firestore:rules`). L'app resta su GitHub Pages con
+`./pubblica.sh`.
 
 **Limite da sapere:** il sito resta pubblico, quindi il portone ferma le
 persone, non un informatico determinato. Per l'uso che se ne fa è sufficiente.
