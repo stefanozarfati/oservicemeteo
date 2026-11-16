@@ -43,10 +43,12 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 /* Search */
 .srow{position:relative;margin-bottom:.6rem}
 .sinp{width:100%;background:rgba(255,255,255,.35);border:2px solid rgba(0,0,0,.2);
-  border-radius:13px;padding:.95rem 8.5rem .95rem 1.2rem;color:var(--t);
+  border-radius:13px;padding:.95rem 7.4rem .95rem 1.1rem;color:var(--t);
   font-size:1rem;font-family:'Raleway',sans-serif;outline:none;transition:.2s}
 .sinp:focus{border-color:var(--o);box-shadow:0 0 0 3px rgba(240,112,32,.15)}
-.sinp::placeholder{color:rgba(80,30,0,.55)}
+/* La scritta grigia dentro la barra: piu' piccola del testo digitato, se no
+   il posto non basta e la frase resta tagliata a meta'. */
+.sinp::placeholder{color:rgba(80,30,0,.55);font-size:.85rem}
 .sbtn{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);
   background:var(--o);border:none;border-radius:9px;width:40px;height:40px;
   cursor:pointer;font-size:1.1rem;transition:.15s}
@@ -241,15 +243,26 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 .ebig{font-size:3.5rem;margin-bottom:.8rem}
 
 /* Install banner */
-.ibanner{display:none;position:fixed;bottom:1rem;left:1rem;right:1rem;
-  background:#363636;border:2px solid var(--bd);border-radius:13px;
-  padding:.85rem 1rem;z-index:100;box-shadow:0 8px 32px rgba(0,0,0,.5);
-  align-items:center;gap:.75rem}
+/* Sfondo chiaro pieno e testo scuro: prima era grigio scuro con scritte
+   nere e non si leggeva (segnalato da Stefano il 16/11/2026). */
+.ibanner{display:none;position:fixed;bottom:1rem;left:.7rem;right:.7rem;
+  background:#fffaf4;border:2px solid var(--o);border-radius:14px;
+  padding:.9rem 1rem;z-index:100;box-shadow:0 10px 34px rgba(0,0,0,.45);
+  align-items:center;gap:.6rem;flex-wrap:wrap}
 .ibanner.show{display:flex}
-.ibanner p{flex:1;font-size:.85rem;color:var(--t);line-height:1.4}
-.ibtn{background:var(--o);border:none;border-radius:8px;padding:.45rem .85rem;
-  color:#fff;font-size:.85rem;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
-.iclose{background:none;border:none;color:var(--t2);font-size:1.1rem;cursor:pointer}
+body.con-banner{padding-bottom:13rem}
+.ibanner p{flex:1 1 100%;font-size:.92rem;color:#2a1000;line-height:1.5;font-weight:600}
+.ibanner strong{color:#b84a00;font-weight:800}
+.ibtn{background:var(--o);border:none;border-radius:9px;padding:.6rem 1.1rem;
+  color:#fff;font-size:.95rem;font-family:'Raleway',sans-serif;font-weight:800;cursor:pointer;
+  margin-left:auto;box-shadow:0 2px 8px rgba(240,112,32,.4)}
+.iclose{background:none;border:none;color:#7a4010;font-size:1.2rem;cursor:pointer}
+/* Riga in fondo alla pagina: dice sempre com'e' installata l'app. */
+.stato-app{text-align:center;font-size:.72rem;font-weight:700;line-height:1.5;
+  overflow-wrap:anywhere;margin:.8rem 0 1.2rem;padding:.5rem .8rem;border-radius:10px;
+  background:rgba(255,255,255,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  color:#3a1800}
+.stato-app.ko{background:rgba(255,236,220,.85);color:#8a2b00}
 
 .gps-btn{position:absolute;right:3.5rem;top:50%;transform:translateY(-50%);
   background:none;border:none;cursor:pointer;font-size:1.1rem;padding:.3rem;
@@ -483,7 +496,7 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
 
   <!-- Search -->
   <div class="srow">
-    <input class="sinp" id="inp" placeholder="Città, monte, valle, frazione..."
+    <input class="sinp" id="inp" placeholder="Cerca una località"
       autocomplete="off" autocorrect="off" spellcheck="false"
       onkeydown="if(event.key==='Enter'){document.getElementById('sug').classList.remove('open');go();}">
     <button class="clr-btn" id="clr-btn" onclick="clearSearch()" title="Cancella"><i class="fa-solid fa-xmark"></i></button>
@@ -536,14 +549,17 @@ body{background:var(--bg);color:var(--t);font-family:'Raleway',sans-serif;min-he
     </div>
   </div>
 
+  <!-- Dice sempre se e' l'app installata o solo una pagina del browser -->
+  <div class="stato-app" id="stato-app"></div>
+
   </div><!-- fine content-wrap -->
 </div>
 
 <!-- Install banner -->
 <div class="ibanner" id="ibanner">
-  <p>📲 Aggiungi <strong>OServiceMeteo</strong> alla schermata Home</p>
+  <p id="itesto">📲 Aggiungi <strong>OServiceMeteo</strong> alla schermata Home</p>
   <button class="ibtn" id="ibtn">Installa</button>
-  <button class="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
+  <button class="iclose" id="iclose" onclick="document.getElementById('ibanner').classList.remove('show')">✕</button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1920,12 +1936,81 @@ function showErr(msg){document.getElementById("content").innerHTML=`<div class="
 //  PWA
 // ═══════════════════════════════════════════════════════
 let dPwP=null;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;document.getElementById("ibanner").classList.add("show");});
-document.getElementById("ibtn").addEventListener("click",async()=>{if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}document.getElementById("ibanner").classList.remove("show");});
+
+// Com'e' aperta l'app adesso: "app" = installata davvero (niente barra
+// dell'indirizzo), "browser" = scheda del browser o vecchia scorciatoia
+// «Aggiungi a Home». Le scorciatoie le cancella l'aggiornamento di Android:
+// e' successo a due collaboratori il 16/11/2026, e chi le usa non lo sa.
+function statoInstallazione(){
+  try{
+    if(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)return "app";
+    if(window.matchMedia&&window.matchMedia("(display-mode: fullscreen)").matches)return "app";
+    if(window.matchMedia&&window.matchMedia("(display-mode: minimal-ui)").matches)return "app";
+    if(window.navigator.standalone===true)return "app";
+  }catch(e){}
+  return "browser";
+}
+
+function aggiornaStatoApp(){
+  var el=document.getElementById("stato-app");
+  if(!el)return;
+  if(statoInstallazione()==="app"){
+    el.className="stato-app";
+    el.innerHTML="\u2705 App installata<br>versione "+VERSIONE;
+  }else{
+    el.className="stato-app ko";
+    el.innerHTML="\u26a0\ufe0f Aperta nel browser, <strong>non installata</strong><br>versione "+VERSIONE;
+  }
+}
+
+function aggiornaBannerInstalla(){
+  var b=document.getElementById("ibanner");
+  if(!b)return;
+  aggiornaStatoApp();
+  if(statoInstallazione()==="app"){b.classList.remove("show");document.body.classList.remove("con-banner");return;}
+
+  var ua=navigator.userAgent||"";
+  var android=/Android/i.test(ua);
+  var isChrome=/Chrome\//.test(ua)&&!/EdgA|OPR\/|SamsungBrowser|YaBrowser|MiuiBrowser|HuaweiBrowser|UCBrowser|FxiOS|Firefox/i.test(ua);
+  var p=document.getElementById("itesto");
+  var btn=document.getElementById("ibtn");
+  var x=document.getElementById("iclose");
+
+  if(android){
+    // Su Android il banner non si chiude: finche' non e' installata davvero
+    // deve restare li' sotto gli occhi.
+    if(x)x.style.display="none";
+    var avviso="\u26a0\ufe0f <strong>Non stai usando l'app installata.</strong> ";
+    var coda=" Non usare \u00abAggiungi a Home\u00bb: quella \u00e8 solo una scorciatoia, e un aggiornamento di Android la cancella.";
+    if(!isChrome){
+      p.innerHTML=avviso+"Apri questo indirizzo con <strong>Chrome</strong> e installala da l\u00ec."+coda;
+    }else if(dPwP){
+      // c'e' il tasto vero: indicarlo, e' la strada piu' corta
+      p.innerHTML=avviso+"Tocca <strong>Installa</strong> qui sotto."+coda;
+    }else{
+      p.innerHTML=avviso+"Installala dal menu \u22ee di Chrome \u2192 <strong>Installa app</strong>."+coda;
+    }
+  }else{
+    if(x)x.style.display="";
+    p.innerHTML="\ud83d\udcf2 Aggiungi <strong>OServiceMeteo</strong> alla schermata Home";
+    if(!dPwP)return;   // fuori da Android non insistere se non e' installabile
+  }
+  btn.style.display = dPwP ? "" : "none";
+  b.classList.add("show");
+  document.body.classList.add("con-banner");
+}
+
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dPwP=e;aggiornaBannerInstalla();});
+window.addEventListener("appinstalled",()=>{dPwP=null;document.getElementById("ibanner").classList.remove("show");document.body.classList.remove("con-banner");aggiornaStatoApp();});
+document.getElementById("ibtn").addEventListener("click",async()=>{
+  if(dPwP){dPwP.prompt();await dPwP.userChoice;dPwP=null;}
+  document.getElementById("ibanner").classList.remove("show");
+  document.body.classList.remove("con-banner");
+});
 // ---------- AGGIORNAMENTO AUTOMATICO ----------
 // All'apertura e a ogni ritorno in primo piano, l'app chiede al server se
 // esiste una versione piu' recente e in quel caso si ricarica da sola.
-const VERSIONE="2026-11-11-1024";
+const VERSIONE="2026-11-16-1256";
 async function controllaVersione(){
   try{
     const r=await fetch("versione.json?t="+Date.now(),{cache:"no-store"});
@@ -1963,32 +2048,13 @@ try{
   }
 }catch(e){}
 
-// Avvisi installazione Android (silenziosi se non applicabili)
-(function(){
-  try{
-    var ua=navigator.userAgent||"";
-    if(!/Android/i.test(ua))return;
-    var standalone=false;
-    try{
-      standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true;
-    }catch(e){}
-    if(standalone)return;
-    var isChrome=/Chrome\//.test(ua)&&!/EdgA|OPR\/|SamsungBrowser|YaBrowser|MiuiBrowser|HuaweiBrowser|UCBrowser|FxiOS|Firefox/i.test(ua);
-    var box=document.createElement("div");
-    box.className="ibanner show";
-    box.style.bottom="auto";
-    box.style.top="1rem";
-    box.innerHTML=isChrome
-      ? '<p>Per installare usa il tasto <strong>Installa</strong> (o menu ⋮ → Installa app), non «Aggiungi a Home»</p>'
-      : '<p>Per installarla apri questo link con <strong>Chrome</strong></p>';
-    var x=document.createElement("button");
-    x.className="iclose";
-    x.textContent="✕";
-    x.addEventListener("click",function(){box.classList.remove("show");});
-    box.appendChild(x);
-    document.body.appendChild(box);
-  }catch(e){}
-})();
+// Il vecchio avviso Android separato e' stato unito al banner qui sopra:
+// due riquadri sovrapposti e uno illeggibile (sfondo grigio, scritte nere).
+aggiornaBannerInstalla();
+window.addEventListener("load",aggiornaBannerInstalla);
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible")aggiornaBannerInstalla();
+});
 
 
 function initWindy(){

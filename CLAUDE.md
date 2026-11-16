@@ -105,6 +105,42 @@ La larghezza della colonna oraria, `.hcol{width:163px}`, è anch'essa in px
 
 ---
 
+## 📲 Installazione: scorciatoia vs app vera (16/11/2026)
+
+Il 16/11/2026 due collaboratori si sono visti sparire Meteo dopo un
+aggiornamento di Android, mentre OService TEAM e OService START sono rimaste.
+
+**Causa:** Meteo è nata a giugno 2026 come semplice pagina web e ha avuto un
+manifest solo il **27/10/2026** (commit `0b5a355`). Chi l'ha messa sulla Home
+prima di quella data ha creato una **scorciatoia** «Aggiungi a Home», non ha
+installato un'app. Le scorciatoie le tiene la schermata Home del telefono e un
+aggiornamento di sistema può cancellarle; le app vere (WebAPK) stanno in
+Impostazioni → App e sopravvivono. TEAM e START avevano un manifest dall'inizio.
+
+**Cosa è stato messo in piedi:**
+
+- `aggiornaBannerInstalla()` — **un solo** banner (prima erano due, uno dei
+  quali con sfondo `#363636` e testo `var(--t)` quasi nero: illeggibile).
+  Su Android, finché `statoInstallazione()` dice `browser`, il banner **resta**:
+  la ✕ viene nascosta. Il testo cambia da solo in tre casi: c'è il tasto
+  `Installa` (`beforeinstallprompt` arrivato), Chrome senza tasto (menu ⋮), o
+  browser diverso da Chrome (apri con Chrome).
+- `#stato-app` — riga in fondo alla pagina, **sempre** visibile, che dice
+  `✅ App installata` oppure `⚠️ Aperta nel browser, non installata`, con il
+  timbro di versione sotto. Serve per far controllare un telefono in dieci
+  secondi senza spiegazioni.
+- `body.con-banner` — spazio in fondo, se no il banner fisso copre quella riga.
+
+**Da sapere:** `statoInstallazione()` si basa su `display-mode`. Se qualcuno
+apre il link in una scheda di Chrome *avendo* l'app installata, il banner dice
+comunque «non stai usando l'app installata». È vero (sta usando il browser) e
+capita di rado, perché Chrome di solito dirotta da solo i link sull'app.
+
+**Non togliere la ✕ anche fuori da Android:** su computer e iPhone il banner
+resta richiudibile, e non compare affatto se il browser non sa installare.
+
+---
+
 ## Come si collauda
 
 Il browser integrato **aggancia il `launch.json` di un altro progetto**: non
